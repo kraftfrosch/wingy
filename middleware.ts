@@ -17,7 +17,7 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
           response = NextResponse.next({
@@ -35,20 +35,66 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Protected routes
-  if (request.nextUrl.pathname.startsWith('/onboarding') || request.nextUrl.pathname.startsWith('/feed')) {
+  const pathname = request.nextUrl.pathname
+
+  // Protected routes - must be logged in
+  if (pathname.startsWith('/onboarding') || pathname.startsWith('/feed')) {
     if (!user) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
+
+    // Check onboarding status for routing
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('onboarding_completed, agent_ready, display_name')
+      .eq('user_id', user.id)
+      .single()
+
+    const isOnboardingComplete = profile?.onboarding_completed || profile?.agent_ready
+    const hasProfile = !!profile?.display_name
+
+    // User trying to access feed but hasn't completed onboarding
+    if (pathname.startsWith('/feed') && !isOnboardingComplete) {
+      if (hasProfile) {
+        // Has profile but not complete - go to conversation
+        return NextResponse.redirect(new URL('/onboarding/conversation', request.url))
+      } else {
+        // No profile - start onboarding
+        return NextResponse.redirect(new URL('/onboarding', request.url))
+      }
+    }
+
+    // User trying to access onboarding but already completed
+    if (pathname.startsWith('/onboarding') && isOnboardingComplete) {
+      return NextResponse.redirect(new URL('/feed', request.url))
+    }
+
+    // User trying to access basic onboarding but already has profile
+    if (pathname === '/onboarding' && hasProfile && !isOnboardingComplete) {
+      return NextResponse.redirect(new URL('/onboarding/conversation', request.url))
+    }
   }
 
-  // Auth routes (redirect to feed if already logged in)
-  if (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/') {
+  // Auth routes (redirect if already logged in)
+  if (pathname === '/login' || pathname === '/') {
     if (user) {
-      // Check if onboarding is completed (optional, but good UX)
-      // For now, just redirect to feed or onboarding
-      // We can check profile existence later
-       return NextResponse.redirect(new URL('/feed', request.url))
+      // Check if they have completed onboarding
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('onboarding_completed, agent_ready, display_name')
+        .eq('user_id', user.id)
+        .single()
+
+      const isOnboardingComplete = profile?.onboarding_completed || profile?.agent_ready
+      const hasProfile = !!profile?.display_name
+
+      if (isOnboardingComplete) {
+        return NextResponse.redirect(new URL('/feed', request.url))
+      } else if (hasProfile) {
+        return NextResponse.redirect(new URL('/onboarding/conversation', request.url))
+      } else {
+        return NextResponse.redirect(new URL('/onboarding', request.url))
+      }
     }
   }
 
