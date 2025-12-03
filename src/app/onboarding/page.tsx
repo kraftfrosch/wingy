@@ -108,7 +108,7 @@ export default function BasicInfoPage() {
             placeholder="e.g. Alex"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="text-lg py-6 rounded-2xl border-slate-200 focus:border-purple-500 focus:ring-purple-500"
+            className="text-lg py-6 rounded-md border-slate-200 focus:border-purple-500 focus:ring-purple-500"
           />
         </div>
 
@@ -122,7 +122,7 @@ export default function BasicInfoPage() {
             placeholder="24"
             value={age}
             onChange={(e) => setAge(e.target.value)}
-            className="text-lg py-6 rounded-2xl border-slate-200 focus:border-purple-500 focus:ring-purple-500"
+            className="text-lg py-6 rounded-md border-slate-200 focus:border-purple-500 focus:ring-purple-500"
           />
         </div>
       </div>
@@ -145,7 +145,7 @@ export default function BasicInfoPage() {
         {["Man", "Woman", "Non-binary", "Other"].map((g) => (
           <Label
             key={g}
-            className={`flex items-center justify-between px-6 py-4 rounded-2xl border-2 cursor-pointer transition-all ${
+            className={`flex items-center justify-between px-6 py-4 rounded-md border-2 cursor-pointer transition-all ${
               gender === g
                 ? "border-purple-600 bg-purple-50 text-purple-900"
                 : "border-slate-100 bg-white hover:border-slate-200"
@@ -182,7 +182,7 @@ export default function BasicInfoPage() {
         {["Men", "Women", "Everyone"].map((g) => (
           <Label
             key={g}
-            className={`flex items-center justify-between px-6 py-4 rounded-2xl border-2 cursor-pointer transition-all ${
+            className={`flex items-center justify-between px-6 py-4 rounded-md border-2 cursor-pointer transition-all ${
               lookingFor === g
                 ? "border-pink-500 bg-pink-50 text-pink-900"
                 : "border-slate-100 bg-white hover:border-slate-200"
@@ -226,7 +226,7 @@ export default function BasicInfoPage() {
             (stepIndex === 1 && !gender) ||
             (stepIndex === 2 && !lookingFor)
           }
-          className="w-full py-7 text-lg rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200 transition-all active:scale-[0.98]"
+          className="w-full py-7 text-lg rounded-md bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20 transition-all active:scale-[0.98]"
         >
           {isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin" />

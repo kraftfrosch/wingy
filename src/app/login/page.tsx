@@ -79,13 +79,13 @@ function LoginForm() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-md w-full bg-white rounded-3xl shadow-xl overflow-hidden p-8 space-y-8"
+      className="max-w-md w-full bg-card rounded-xl shadow-2xl shadow-primary/5 overflow-hidden p-8 space-y-8 border border-border/50"
     >
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold bg-linear-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold text-foreground font-heading">
           VoiceDate
         </h1>
-        <p className="text-slate-500">
+        <p className="text-muted-foreground">
           {isSignUp ? "Create your account" : "Welcome back"}
         </p>
       </div>
@@ -100,7 +100,7 @@ function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="rounded-xl border-slate-200"
+            className="rounded-md border-input bg-secondary/30 focus:bg-background transition-colors py-6"
           />
         </div>
 
@@ -112,14 +112,14 @@ function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="rounded-xl border-slate-200"
+            className="rounded-md border-input bg-secondary/30 focus:bg-background transition-colors py-6"
           />
         </div>
 
         <Button
           type="submit"
           disabled={isLoading}
-          className="w-full py-6 text-lg rounded-xl bg-slate-900 hover:bg-slate-800"
+          className="w-full py-6 text-lg rounded-md bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
         >
           {isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -134,7 +134,7 @@ function LoginForm() {
       <div className="text-center">
         <button
           onClick={() => setIsSignUp(!isSignUp)}
-          className="text-sm text-slate-500 hover:text-purple-600 transition-colors"
+          className="text-sm text-muted-foreground hover:text-primary transition-colors"
         >
           {isSignUp
             ? "Already have an account? Log in"
@@ -147,7 +147,11 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+       {/* Background Gradient/Glow */}
+       <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+       <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#1763FC]/5 rounded-full blur-[120px] pointer-events-none" />
+      
       <Suspense fallback={<div>Loading...</div>}>
         <LoginForm />
       </Suspense>

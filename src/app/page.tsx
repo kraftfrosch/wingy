@@ -15,44 +15,46 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Background blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-600/30 rounded-full blur-[100px]" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-pink-600/30 rounded-full blur-[100px]" />
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Gradient/Glow */}
+      <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#1763FC]/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-[40%] left-[40%] w-[40%] h-[40%] bg-[#17FCB0]/10 rounded-full blur-[100px] pointer-events-none" />
 
       <main className="relative z-10 max-w-lg text-center space-y-8">
-        <div className="mx-auto w-24 h-24 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-lg border border-white/10 mb-8">
-          <Mic className="w-10 h-10 text-white" />
+        {/* Glass Icon Container */}
+        <div className="mx-auto w-28 h-28 rounded-2xl flex items-center justify-center glass mb-8 shadow-xl shadow-primary/5">
+          <Mic className="w-10 h-10 text-primary" />
         </div>
 
-        <h1 className="text-5xl font-bold tracking-tight bg-gradient-to-r from-purple-200 to-pink-200 bg-clip-text text-transparent">
+        <h1 className="text-6xl font-bold tracking-tight text-foreground font-heading">
           VoiceDate
         </h1>
 
-        <p className="text-xl text-slate-300 leading-relaxed">
+        <p className="text-xl text-muted-foreground leading-relaxed max-w-md mx-auto">
           Dating feels better when you can hear it. <br />
           Skip the small talk and connect with your voice.
         </p>
 
-        <div className="pt-8 space-y-4">
+        <div className="pt-8 space-y-4 flex flex-col items-center">
           <Link
             href="/login?view=signup"
-            className="w-full bg-white text-slate-900 py-4 px-8 rounded-full font-bold text-lg hover:bg-slate-100 transition-transform active:scale-95 flex items-center justify-center gap-2"
+            className="w-full max-w-xs bg-primary text-primary-foreground py-4 px-8 rounded-md font-bold text-lg hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
           >
             Get Started
             <ArrowRight className="w-5 h-5" />
           </Link>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center w-full">
             <Link
               href="/login"
-              className="text-slate-400 hover:text-white text-sm font-medium transition-colors"
+              className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors py-2"
             >
               Already have an account? Log in
             </Link>
           </div>
 
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground/60 mt-8">
             Available on iOS and Android soon.
           </p>
         </div>

@@ -270,10 +270,10 @@ export default function ConversationPage() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-4"
         >
-          <h1 className="text-3xl font-bold text-slate-900">
+          <h1 className="text-4xl font-bold text-foreground font-heading">
             {hasStarted ? "Listening..." : "Let's get to know you"}
           </h1>
-          <p className="text-slate-500 text-lg max-w-xs mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xs mx-auto leading-relaxed">
             {hasStarted
               ? "Tell me about yourself, your hobbies, and what makes you tick."
               : "I'll ask a few questions to build your profile. Just be yourself!"}
@@ -281,7 +281,7 @@ export default function ConversationPage() {
         </motion.div>
 
         {/* Visualizer Circle */}
-        <div className="relative w-48 h-48 flex items-center justify-center">
+        <div className="relative w-56 h-56 flex items-center justify-center my-8">
           <AnimatePresence>
             {status === "connected" && (
               <>
@@ -295,7 +295,7 @@ export default function ConversationPage() {
                     duration: 2,
                     ease: "easeInOut",
                   }}
-                  className="absolute inset-0 bg-purple-400 rounded-full blur-xl"
+                  className="absolute inset-0 bg-gradient-to-r from-[#17FCB0] to-[#1763FC] rounded-full blur-[60px]"
                 />
                 <motion.div
                   animate={{
@@ -306,22 +306,22 @@ export default function ConversationPage() {
                     duration: 1,
                     ease: "easeInOut",
                   }}
-                  className="absolute inset-4 bg-linear-to-tr from-purple-500 to-pink-500 rounded-full opacity-20"
+                  className="absolute inset-4 bg-gradient-to-tr from-[#17FCB0] to-[#1763FC] rounded-full opacity-30 blur-xl"
                 />
               </>
             )}
           </AnimatePresence>
 
-          <div className="relative z-10 w-32 h-32 bg-white rounded-full shadow-xl flex items-center justify-center">
+          <div className="relative z-10 w-40 h-40 bg-card rounded-full shadow-2xl shadow-primary/10 flex items-center justify-center border border-white/20 backdrop-blur-sm">
             {status === "connected" ? (
               <motion.div
                 animate={{
                   height: isSpeaking ? [20, 50, 20] : 10,
                 }}
                 transition={{ repeat: Infinity, duration: 0.5 }}
-                className="flex gap-1 items-center"
+                className="flex gap-1.5 items-center"
               >
-                {[1, 2, 3, 4].map((i) => (
+                {[1, 2, 3, 4, 5].map((i) => (
                   <motion.div
                     key={i}
                     animate={{
@@ -332,12 +332,12 @@ export default function ConversationPage() {
                       duration: 0.4,
                       delay: i * 0.1,
                     }}
-                    className="w-2 bg-slate-900 rounded-full"
+                    className="w-2 bg-gradient-to-b from-[#17FCB0] to-[#1763FC] rounded-full"
                   />
                 ))}
               </motion.div>
             ) : (
-              <Mic className="w-10 h-10 text-slate-300" />
+              <Mic className="w-12 h-12 text-muted-foreground/50" />
             )}
           </div>
         </div>
@@ -347,7 +347,7 @@ export default function ConversationPage() {
         {!hasStarted ? (
           <Button
             onClick={startConversation}
-            className="w-full py-7 text-lg rounded-2xl bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-200"
+            className="w-full py-8 text-lg rounded-md bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             Start Interview
           </Button>
@@ -355,11 +355,12 @@ export default function ConversationPage() {
           <Button
             onClick={endConversation}
             disabled={isAnalyzing}
-            className="w-full py-7 text-lg rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 border-2 border-slate-200"
+            variant="outline"
+            className="w-full py-8 text-lg rounded-md bg-secondary hover:bg-secondary/80 text-foreground border-transparent shadow-sm"
           >
             {isAnalyzing ? (
               <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                <span className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 Creating Profile...
               </span>
             ) : (
