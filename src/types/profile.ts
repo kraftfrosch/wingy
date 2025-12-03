@@ -81,3 +81,17 @@ export type UpdateProfileInput = Partial<
     'id' | 'user_id' | 'created_at' | 'updated_at'
   >
 >;
+
+export interface UserLike {
+  id: string;
+  from_user_id: string;
+  to_user_id: string;
+  created_at: string;
+}
+
+export interface MatchWithProfile {
+  user_id: string;
+  matched_with_user_id: string;
+  matched_at: string;
+  profile: UserProfile;
+}
