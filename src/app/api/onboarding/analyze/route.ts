@@ -36,18 +36,21 @@ export async function POST(request: NextRequest) {
       ) {
         // Map the transcript items to a readable string
         transcriptText = transcriptData.transcript
-          .map((t) => `${t.role.toUpperCase()}: ${t.message}`)
+          .map(
+            (t: { role: string; message: string }) =>
+              `${t.role.toUpperCase()}: ${t.message}`
+          )
           .join("\n");
       } else {
         console.warn("No transcript found in response", transcriptData);
-        throw new Error("No transcript available");
+        // We'll allow continuing even without transcript to not block the user,
+        // but the AI analysis will be limited.
+        transcriptText = "No transcript available.";
       }
     } catch (e) {
       console.error("Could not fetch transcript:", e);
-      return NextResponse.json(
-        { error: "Failed to retrieve conversation transcript" },
-        { status: 500 }
-      );
+      // Fallback text
+      transcriptText = "Failed to retrieve transcript.";
     }
 
     // 2. Analyze with Vercel AI SDK (Anthropic)
@@ -110,17 +113,22 @@ export async function POST(request: NextRequest) {
         } = await supabaseAdmin.auth.getUser(token);
 
         if (user) {
-          await supabaseAdmin.from("user_profiles").upsert({
-            user_id: user.id,
-            display_name: name,
-            age: parseInt(age),
-            gender: gender,
-            user_profile_prompt: object.user_profile_prompt,
-            user_preferences_prompt: object.user_preferences_prompt,
-            user_important_notes: object.user_important_notes,
-            onboarding_completed: true,
-            updated_at: new Date().toISOString(),
-          });
+          // Use update instead of upsert to preserve existing basic info
+          const { error: updateError } = await supabaseAdmin
+            .from("user_profiles")
+            .update({
+              user_profile_prompt: object.user_profile_prompt,
+              user_preferences_prompt: object.user_preferences_prompt,
+              user_important_notes: object.user_important_notes,
+              onboarding_completed: true,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("user_id", user.id);
+
+          if (updateError) {
+            console.error("Failed to update profile prompts:", updateError);
+            throw updateError;
+          }
         }
       }
 
