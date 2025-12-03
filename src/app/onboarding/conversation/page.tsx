@@ -10,11 +10,15 @@ import { toast } from "sonner";
 import { createSupabaseClient } from "@/lib/supabase-client";
 
 export default function ConversationPage() {
-  const { data, updateData, nextStep } = useOnboarding();
+  const { data, updateData, nextStep, setCurrentStep } = useOnboarding();
   const [hasStarted, setHasStarted] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const supabase = createSupabaseClient();
+
+  useEffect(() => {
+    setCurrentStep(4);
+  }, [setCurrentStep]);
 
   // Audio recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -260,7 +264,7 @@ export default function ConversationPage() {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-between p-8 text-center">
-      <div className="flex-1 flex flex-col items-center justify-center space-y-8 w-full">
+      <div className="flex-1 flex flex-col items-center justify-start pt-4 space-y-8 w-full">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

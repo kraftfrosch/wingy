@@ -15,6 +15,9 @@ interface OnboardingContextType {
   data: OnboardingData;
   updateData: (updates: Partial<OnboardingData>) => void;
   nextStep: (path: string) => void;
+  currentStep: number;
+  setCurrentStep: (step: number) => void;
+  totalSteps: number;
 }
 
 const defaultData: OnboardingData = {
@@ -30,6 +33,8 @@ const OnboardingContext = createContext<OnboardingContextType | undefined>(
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<OnboardingData>(defaultData);
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 4;
   const router = useRouter();
 
   const updateData = (updates: Partial<OnboardingData>) => {
@@ -41,7 +46,16 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <OnboardingContext.Provider value={{ data, updateData, nextStep }}>
+    <OnboardingContext.Provider
+      value={{
+        data,
+        updateData,
+        nextStep,
+        currentStep,
+        setCurrentStep,
+        totalSteps,
+      }}
+    >
       {children}
     </OnboardingContext.Provider>
   );
@@ -54,4 +68,3 @@ export function useOnboarding() {
   }
   return context;
 }
-
