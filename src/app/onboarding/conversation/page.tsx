@@ -349,7 +349,7 @@ export default function ConversationPage() {
             onClick={startConversation}
             className="w-full py-8 text-lg rounded-md bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            Start Interview
+            Start Conversation
           </Button>
         ) : (
           <Button
