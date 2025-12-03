@@ -50,11 +50,16 @@ export default function FeedClient({ user }: FeedClientProps) {
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [showDecisionModal, setShowDecisionModal] = useState(false);
   const [decisions, setDecisions] = useState<Record<string, Decision>>({});
-  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
-  const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
+  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(
+    null
+  );
+  const [currentUserProfile, setCurrentUserProfile] =
+    useState<UserProfile | null>(null);
   const [matches, setMatches] = useState<MatchWithProfile[]>([]);
   const [showMatchesDropdown, setShowMatchesDropdown] = useState(false);
-  const [newMatchProfile, setNewMatchProfile] = useState<UserProfile | null>(null);
+  const [newMatchProfile, setNewMatchProfile] = useState<UserProfile | null>(
+    null
+  );
   const matchesDropdownRef = useRef<HTMLDivElement>(null);
 
   const supabase = createSupabaseClient();
@@ -93,7 +98,10 @@ export default function FeedClient({ user }: FeedClientProps) {
   // Close matches dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (matchesDropdownRef.current && !matchesDropdownRef.current.contains(event.target as Node)) {
+      if (
+        matchesDropdownRef.current &&
+        !matchesDropdownRef.current.contains(event.target as Node)
+      ) {
         setShowMatchesDropdown(false);
       }
     }
@@ -130,7 +138,8 @@ export default function FeedClient({ user }: FeedClientProps) {
     const v = value.toLowerCase().trim();
     if (["woman", "women", "female", "f", "girl"].includes(v)) return "female";
     if (["man", "men", "male", "m", "boy", "guy"].includes(v)) return "male";
-    if (["non-binary", "nonbinary", "nb", "enby", "non binary"].includes(v)) return "non-binary";
+    if (["non-binary", "nonbinary", "nb", "enby", "non binary"].includes(v))
+      return "non-binary";
     if (["any", "everyone", "all", "both"].includes(v)) return "any";
     return v;
   };
@@ -164,8 +173,14 @@ export default function FeedClient({ user }: FeedClientProps) {
     const myPrefs = myProfile.onboarding_preferences;
     const theirPrefs = theirProfile.onboarding_preferences;
 
-    const iWantThem = genderMatchesPreference(theirProfile.gender, myPrefs?.partner_gender);
-    const theyWantMe = genderMatchesPreference(myProfile.gender, theirPrefs?.partner_gender);
+    const iWantThem = genderMatchesPreference(
+      theirProfile.gender,
+      myPrefs?.partner_gender
+    );
+    const theyWantMe = genderMatchesPreference(
+      myProfile.gender,
+      theirPrefs?.partner_gender
+    );
 
     let ageCompatible = true;
     if (myPrefs?.partner_age_range && theirProfile.age) {
@@ -199,7 +214,9 @@ export default function FeedClient({ user }: FeedClientProps) {
   useEffect(() => {
     async function fetchProfiles() {
       if (!currentUserProfile) {
-        console.log("Waiting for current user profile to load before fetching feed...");
+        console.log(
+          "Waiting for current user profile to load before fetching feed..."
+        );
         return;
       }
 
@@ -227,13 +244,17 @@ export default function FeedClient({ user }: FeedClientProps) {
           return;
         }
 
-        console.log(`Found ${data?.length || 0} profiles, filtering by preferences...`);
+        console.log(
+          `Found ${data?.length || 0} profiles, filtering by preferences...`
+        );
 
         const filteredProfiles = (data || []).filter((profile) =>
           areProfilesCompatible(currentUserProfile, profile)
         );
 
-        console.log(`After filtering: ${filteredProfiles.length} compatible profiles`);
+        console.log(
+          `After filtering: ${filteredProfiles.length} compatible profiles`
+        );
 
         setProfiles(filteredProfiles);
       } catch (err) {
@@ -301,7 +322,9 @@ export default function FeedClient({ user }: FeedClientProps) {
 
       const matchesWithProfiles: MatchWithProfile[] = mutualLikes
         .map((like) => {
-          const profile = matchedProfiles?.find((p) => p.user_id === like.from_user_id);
+          const profile = matchedProfiles?.find(
+            (p) => p.user_id === like.from_user_id
+          );
           if (!profile) return null;
           return {
             user_id: currentUserId,
@@ -311,7 +334,10 @@ export default function FeedClient({ user }: FeedClientProps) {
           };
         })
         .filter((m): m is MatchWithProfile => m !== null)
-        .sort((a, b) => new Date(b.matched_at).getTime() - new Date(a.matched_at).getTime());
+        .sort(
+          (a, b) =>
+            new Date(b.matched_at).getTime() - new Date(a.matched_at).getTime()
+        );
 
       setMatches(matchesWithProfiles);
     } catch (err) {
@@ -466,7 +492,9 @@ export default function FeedClient({ user }: FeedClientProps) {
 
   const getBioExcerpt = (profile: UserProfile): string => {
     if (profile.bio) {
-      return profile.bio.length > 100 ? `"${profile.bio.slice(0, 100)}..."` : `"${profile.bio}"`;
+      return profile.bio.length > 100
+        ? `"${profile.bio.slice(0, 100)}..."`
+        : `"${profile.bio}"`;
     }
     if (profile.onboarding_summary) {
       return profile.onboarding_summary.length > 100
@@ -510,13 +538,15 @@ export default function FeedClient({ user }: FeedClientProps) {
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Header */}
       <header className="bg-background/80 backdrop-blur-md px-6 py-4 sticky top-0 z-50 flex justify-between items-center border-b border-border/40">
-        <h1 className="text-3xl font-bold text-primary font-heading">VoiceDate</h1>
+        <h1 className="text-3xl font-bold text-primary font-heading">Ember</h1>
 
         <div className="flex items-center gap-3">
           {likesCount > 0 && (
             <div className="flex items-center gap-1 bg-primary/10 px-3 py-1 rounded-md">
               <Heart className="w-4 h-4 text-primary fill-primary" />
-              <span className="text-sm font-medium text-primary">{likesCount}</span>
+              <span className="text-sm font-medium text-primary">
+                {likesCount}
+              </span>
             </div>
           )}
 
@@ -532,7 +562,9 @@ export default function FeedClient({ user }: FeedClientProps) {
                 </div>
                 {matches.length > 0 && (
                   <div className="absolute -top-2 -right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center border-2 border-background">
-                    <span className="text-[10px] font-bold text-primary-foreground">{matches.length}</span>
+                    <span className="text-[10px] font-bold text-primary-foreground">
+                      {matches.length}
+                    </span>
                   </div>
                 )}
               </div>
@@ -563,7 +595,9 @@ export default function FeedClient({ user }: FeedClientProps) {
                     {matches.length === 0 ? (
                       <div className="p-6 text-center">
                         <Heart className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
-                        <p className="text-muted-foreground text-sm">No matches yet</p>
+                        <p className="text-muted-foreground text-sm">
+                          No matches yet
+                        </p>
                         <p className="text-muted-foreground/60 text-xs mt-1">
                           Keep swiping to find your match!
                         </p>
@@ -575,13 +609,17 @@ export default function FeedClient({ user }: FeedClientProps) {
                             key={match.matched_with_user_id}
                             className="w-full px-4 py-3 flex items-center gap-3 hover:bg-secondary/50 transition-colors"
                             onClick={() => {
-                              toast.info(`Chat with ${match.profile.display_name} coming soon!`);
+                              toast.info(
+                                `Chat with ${match.profile.display_name} coming soon!`
+                              );
                               setShowMatchesDropdown(false);
                             }}
                           >
                             <div
                               className={`w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0 ${
-                                CARD_COLORS[matches.indexOf(match) % CARD_COLORS.length]
+                                CARD_COLORS[
+                                  matches.indexOf(match) % CARD_COLORS.length
+                                ]
                               }`}
                             >
                               {match.profile.profile_photo_url ? (
@@ -598,7 +636,8 @@ export default function FeedClient({ user }: FeedClientProps) {
                             </div>
                             <div className="flex-1 text-left">
                               <h4 className="font-medium text-foreground">
-                                {match.profile.display_name}, {match.profile.age}
+                                {match.profile.display_name},{" "}
+                                {match.profile.age}
                               </h4>
                               <p className="text-xs text-muted-foreground">
                                 Matched {formatMatchTime(match.matched_at)}
@@ -651,7 +690,9 @@ export default function FeedClient({ user }: FeedClientProps) {
             <div className="flex-1 mx-4 h-1 bg-secondary rounded-full overflow-hidden">
               <div
                 className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${((currentIndex + 1) / profiles.length) * 100}%` }}
+                style={{
+                  width: `${((currentIndex + 1) / profiles.length) * 100}%`,
+                }}
               />
             </div>
           </div>
@@ -660,15 +701,21 @@ export default function FeedClient({ user }: FeedClientProps) {
         {profiles.length === 0 ? (
           <div className="bg-card rounded-xl p-8 text-center shadow-sm border border-border/50 mt-20">
             <Mic className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground font-heading mb-2">No matches yet</h3>
-            <p className="text-muted-foreground">Check back later for new profiles!</p>
+            <h3 className="text-lg font-semibold text-foreground font-heading mb-2">
+              No matches yet
+            </h3>
+            <p className="text-muted-foreground">
+              Check back later for new profiles!
+            </p>
           </div>
         ) : isEndOfProfiles ? (
           <div className="bg-card rounded-xl p-8 text-center shadow-sm border border-border/50 mt-20">
             <div className="w-16 h-16 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Heart className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground font-heading mb-2">You&apos;ve seen everyone!</h3>
+            <h3 className="text-lg font-semibold text-foreground font-heading mb-2">
+              You&apos;ve seen everyone!
+            </h3>
             <p className="text-muted-foreground mb-4">
               You liked {likesCount} {likesCount === 1 ? "person" : "people"} 💕
             </p>
@@ -686,7 +733,12 @@ export default function FeedClient({ user }: FeedClientProps) {
               initial={{ opacity: 0, x: 50 }}
               animate={{
                 opacity: 1,
-                x: swipeDirection === "left" ? -300 : swipeDirection === "right" ? 300 : 0,
+                x:
+                  swipeDirection === "left"
+                    ? -300
+                    : swipeDirection === "right"
+                    ? 300
+                    : 0,
               }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
@@ -695,7 +747,9 @@ export default function FeedClient({ user }: FeedClientProps) {
               {currentProfile && (
                 <>
                   <div
-                    className={`h-72 ${CARD_COLORS[currentIndex % CARD_COLORS.length]} relative group transition-colors`}
+                    className={`h-72 ${
+                      CARD_COLORS[currentIndex % CARD_COLORS.length]
+                    } relative group transition-colors`}
                   >
                     {currentProfile.profile_photo_url ? (
                       <img
@@ -713,14 +767,16 @@ export default function FeedClient({ user }: FeedClientProps) {
                       <div className="bg-white/60 backdrop-blur-md px-4 py-1.5 rounded-md text-xs font-medium shadow-sm border border-white/20">
                         {getProfileTag(currentProfile)}
                       </div>
-                      {currentProfile.onboarding_tags?.slice(1, 3).map((tag, i) => (
-                        <div
-                          key={i}
-                          className="bg-white/60 backdrop-blur-md px-4 py-1.5 rounded-md text-xs font-medium shadow-sm border border-white/20"
-                        >
-                          {tag}
-                        </div>
-                      ))}
+                      {currentProfile.onboarding_tags
+                        ?.slice(1, 3)
+                        .map((tag, i) => (
+                          <div
+                            key={i}
+                            className="bg-white/60 backdrop-blur-md px-4 py-1.5 rounded-md text-xs font-medium shadow-sm border border-white/20"
+                          >
+                            {tag}
+                          </div>
+                        ))}
                     </div>
                   </div>
 
@@ -732,7 +788,8 @@ export default function FeedClient({ user }: FeedClientProps) {
                       {currentProfile.location_city && (
                         <p className="text-muted-foreground text-sm mt-1">
                           {currentProfile.location_city}
-                          {currentProfile.location_region && `, ${currentProfile.location_region}`}
+                          {currentProfile.location_region &&
+                            `, ${currentProfile.location_region}`}
                         </p>
                       )}
                       <p className="text-muted-foreground text-sm mt-2 leading-relaxed">
@@ -806,12 +863,20 @@ export default function FeedClient({ user }: FeedClientProps) {
                           scale: isSpeaking ? [1, 1.2, 1] : 1,
                           opacity: isSpeaking ? 0.5 : 0.2,
                         }}
-                        transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                        transition={{
+                          repeat: Infinity,
+                          duration: 2,
+                          ease: "easeInOut",
+                        }}
                         className="absolute inset-0 bg-primary rounded-full blur-xl"
                       />
                       <motion.div
                         animate={{ scale: isSpeaking ? [1, 1.1, 1] : 1 }}
-                        transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }}
+                        transition={{
+                          repeat: Infinity,
+                          duration: 1,
+                          ease: "easeInOut",
+                        }}
                         className="absolute inset-4 bg-primary/30 rounded-full"
                       />
                     </>
@@ -824,7 +889,11 @@ export default function FeedClient({ user }: FeedClientProps) {
                           <motion.div
                             key={i}
                             animate={{ height: isSpeaking ? [15, 35, 15] : 8 }}
-                            transition={{ repeat: Infinity, duration: 0.4, delay: i * 0.1 }}
+                            transition={{
+                              repeat: Infinity,
+                              duration: 0.4,
+                              delay: i * 0.1,
+                            }}
                             className="w-2 bg-foreground rounded-full"
                           />
                         ))}
@@ -873,7 +942,9 @@ export default function FeedClient({ user }: FeedClientProps) {
             >
               <div className="text-center space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground font-heading">What do you think?</h2>
+                  <h2 className="text-2xl font-bold text-foreground font-heading">
+                    What do you think?
+                  </h2>
                   <p className="text-muted-foreground mt-2">
                     Would you like to match with {currentProfile.display_name}?
                   </p>
@@ -881,7 +952,9 @@ export default function FeedClient({ user }: FeedClientProps) {
 
                 <div className="flex items-center gap-4 bg-secondary p-4 rounded-lg">
                   <div
-                    className={`w-16 h-16 ${CARD_COLORS[currentIndex % CARD_COLORS.length]} rounded-lg flex items-center justify-center flex-shrink-0`}
+                    className={`w-16 h-16 ${
+                      CARD_COLORS[currentIndex % CARD_COLORS.length]
+                    } rounded-lg flex items-center justify-center flex-shrink-0`}
                   >
                     {currentProfile.profile_photo_url ? (
                       <img
@@ -897,7 +970,9 @@ export default function FeedClient({ user }: FeedClientProps) {
                     <h3 className="font-semibold text-foreground">
                       {currentProfile.display_name}, {currentProfile.age}
                     </h3>
-                    <p className="text-sm text-muted-foreground">{getProfileTag(currentProfile)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {getProfileTag(currentProfile)}
+                    </p>
                   </div>
                 </div>
 
