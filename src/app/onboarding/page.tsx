@@ -21,7 +21,7 @@ export default function BasicInfoPage() {
 
   const handleNext = () => {
     updateData({ displayName: name, age, gender, lookingFor });
-    
+
     // Check if current step is valid
     if (step === 0 && (!name || !age)) return;
     if (step === 1 && !gender) return;
@@ -41,14 +41,14 @@ export default function BasicInfoPage() {
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">
           First things first.
         </h1>
-        <p className="text-slate-500 text-lg">
-          What should we call you?
-        </p>
+        <p className="text-slate-500 text-lg">What should we call you?</p>
       </div>
-      
+
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="name" className="text-base">Display Name</Label>
+          <Label htmlFor="name" className="text-base">
+            Display Name
+          </Label>
           <Input
             id="name"
             placeholder="e.g. Alex"
@@ -57,9 +57,11 @@ export default function BasicInfoPage() {
             className="text-lg py-6 rounded-2xl border-slate-200 focus:border-purple-500 focus:ring-purple-500"
           />
         </div>
-        
+
         <div className="space-y-2">
-          <Label htmlFor="age" className="text-base">Age</Label>
+          <Label htmlFor="age" className="text-base">
+            Age
+          </Label>
           <Input
             id="age"
             type="number"
@@ -78,12 +80,14 @@ export default function BasicInfoPage() {
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">
           How do you identify?
         </h1>
-        <p className="text-slate-500 text-lg">
-          Helping us find your people.
-        </p>
+        <p className="text-slate-500 text-lg">Helping us find your people.</p>
       </div>
 
-      <RadioGroup value={gender} onValueChange={setGender} className="grid gap-4">
+      <RadioGroup
+        value={gender}
+        onValueChange={setGender}
+        className="grid gap-4"
+      >
         {["Man", "Woman", "Non-binary", "Other"].map((g) => (
           <Label
             key={g}
@@ -113,12 +117,14 @@ export default function BasicInfoPage() {
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">
           Who are you into?
         </h1>
-        <p className="text-slate-500 text-lg">
-          We'll tailor your feed.
-        </p>
+        <p className="text-slate-500 text-lg">We&apos;ll tailor your feed.</p>
       </div>
 
-      <RadioGroup value={lookingFor} onValueChange={setLookingFor} className="grid gap-4">
+      <RadioGroup
+        value={lookingFor}
+        onValueChange={setLookingFor}
+        className="grid gap-4"
+      >
         {["Men", "Women", "Everyone"].map((g) => (
           <Label
             key={g}
@@ -140,7 +146,7 @@ export default function BasicInfoPage() {
           </Label>
         ))}
       </RadioGroup>
-    </div>
+    </div>,
   ];
 
   return (
@@ -174,4 +180,3 @@ export default function BasicInfoPage() {
     </div>
   );
 }
-

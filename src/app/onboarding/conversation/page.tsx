@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useConversation } from "@elevenlabs/react";
 import { useOnboarding } from "../onboarding-context";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, PhoneOff } from "lucide-react";
+import { Mic, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
+import { createSupabaseClient } from "@/lib/supabase-client";
 
 export default function ConversationPage() {
   const { data, updateData, nextStep } = useOnboarding();
   const [hasStarted, setHasStarted] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const supabase = createSupabaseClient();
 
   const conversation = useConversation({
     onConnect: () => console.log("Connected to onboarding agent"),
@@ -39,6 +41,7 @@ export default function ConversationPage() {
 
       const id = await conversation.startSession({
         agentId,
+        connectionType: "webrtc", // Explicitly set connection type
       });
       setConversationId(id);
       setHasStarted(true);
@@ -49,7 +52,8 @@ export default function ConversationPage() {
   }, [conversation]);
 
   const endConversation = async () => {
-    // Use the stored conversationId
+    // Capture the ID *before* ending the session, just in case the SDK clears it (though it usually persists)
+    // But we rely on stored state `conversationId` now
     if (!conversationId) {
       console.error("No conversation ID found");
       toast.error("Could not retrieve conversation details. Please try again.");
@@ -66,9 +70,22 @@ export default function ConversationPage() {
       // Short delay to allow backend to index/process the audio/transcript
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
+      // Get current session for auth token
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch("/api/onboarding/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           conversationId: id,
           userInfo: {
@@ -148,7 +165,7 @@ export default function ConversationPage() {
                     duration: 1,
                     ease: "easeInOut",
                   }}
-                  className="absolute inset-4 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full opacity-20"
+                  className="absolute inset-4 bg-linear-to-tr from-purple-500 to-pink-500 rounded-full opacity-20"
                 />
               </>
             )}

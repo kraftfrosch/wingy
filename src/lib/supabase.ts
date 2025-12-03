@@ -1,6 +1,7 @@
 /**
- * Supabase Client
- * Server-side client for Supabase operations
+ * Supabase Admin Client
+ * Server-side ONLY client for Supabase operations
+ * Do NOT import this into Client Components
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -23,14 +24,3 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
     persistSession: false,
   },
 });
-
-// Client-side client (respects RLS)
-export function createSupabaseClient() {
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!anonKey) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable"
-    );
-  }
-  return createClient(supabaseUrl, anonKey);
-}
