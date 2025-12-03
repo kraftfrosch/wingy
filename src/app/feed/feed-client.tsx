@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart,
   X,
-  MessageCircle,
   Mic,
   PhoneOff,
   ChevronDown,
@@ -508,7 +507,7 @@ export default function FeedClient({ user }: FeedClientProps) {
   const isEndOfProfiles = currentIndex >= profiles.length;
 
   return (
-    <div className="min-h-screen bg-background pb-20 relative overflow-hidden">
+    <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Header */}
       <header className="bg-background/80 backdrop-blur-md px-6 py-4 sticky top-0 z-50 flex justify-between items-center border-b border-border/40">
         <h1 className="text-3xl font-bold text-primary font-heading">VoiceDate</h1>
@@ -642,7 +641,7 @@ export default function FeedClient({ user }: FeedClientProps) {
       </header>
 
       {/* Main Content */}
-      <main className="p-4 space-y-4 max-w-md mx-auto relative z-10">
+      <main className="p-4 pb-8 space-y-4 max-w-md mx-auto relative z-10">
         {/* Progress indicator */}
         {profiles.length > 0 && !isEndOfProfiles && (
           <div className="flex items-center justify-between mb-4">
@@ -696,7 +695,7 @@ export default function FeedClient({ user }: FeedClientProps) {
               {currentProfile && (
                 <>
                   <div
-                    className={`h-52 ${CARD_COLORS[currentIndex % CARD_COLORS.length]} relative group transition-colors`}
+                    className={`h-72 ${CARD_COLORS[currentIndex % CARD_COLORS.length]} relative group transition-colors`}
                   >
                     {currentProfile.profile_photo_url ? (
                       <img
@@ -773,26 +772,6 @@ export default function FeedClient({ user }: FeedClientProps) {
         )}
       </main>
 
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-border/40 px-8 py-4 flex justify-between items-center max-w-md mx-auto pb-8 z-50">
-        <button className="text-primary flex flex-col items-center gap-1">
-          <div className="w-12 h-12 rounded-md bg-primary/10 flex items-center justify-center mb-1">
-            <div className="w-2 h-2 bg-primary rounded-full" />
-          </div>
-        </button>
-
-        <div className="absolute left-1/2 top-[-20px] -translate-x-1/2">
-          <button className="w-16 h-16 bg-primary rounded-2xl shadow-lg shadow-primary/30 flex items-center justify-center text-primary-foreground hover:scale-105 transition-transform">
-            <Mic className="w-8 h-8" />
-          </button>
-        </div>
-
-        <button className="text-muted-foreground hover:text-foreground flex flex-col items-center gap-1">
-          <div className="w-12 h-12 flex items-center justify-center mb-1">
-            <MessageCircle className="w-7 h-7" />
-          </div>
-        </button>
-      </nav>
 
       {/* Voice Call Modal */}
       <AnimatePresence>
