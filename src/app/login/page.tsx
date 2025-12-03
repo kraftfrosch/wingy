@@ -83,7 +83,7 @@ function LoginForm() {
     >
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-bold text-foreground font-heading">
-          VoiceDate
+          Ember
         </h1>
         <p className="text-muted-foreground">
           {isSignUp ? "Create your account" : "Welcome back"}
@@ -148,10 +148,10 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-       {/* Background Gradient/Glow */}
-       <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
-       <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#1763FC]/5 rounded-full blur-[120px] pointer-events-none" />
-      
+      {/* Background Gradient/Glow */}
+      <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#1763FC]/5 rounded-full blur-[120px] pointer-events-none" />
+
       <Suspense fallback={<div>Loading...</div>}>
         <LoginForm />
       </Suspense>

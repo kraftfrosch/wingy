@@ -7,7 +7,7 @@ import Link from "next/link";
 export default function VerifyEmailPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-       {/* Background Gradient/Glow */}
+      {/* Background Gradient/Glow */}
       <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#1763FC]/5 rounded-full blur-[120px] pointer-events-none" />
 
@@ -25,7 +25,8 @@ export default function VerifyEmailPage() {
             Check your email
           </h1>
           <p className="text-muted-foreground leading-relaxed">
-            We've sent you a verification link. Please check your inbox to verify your account and get started with VoiceDate.
+            We've sent you a verification link. Please check your inbox to
+            verify your account and get started with Ember.
           </p>
         </div>
 
@@ -40,4 +41,3 @@ export default function VerifyEmailPage() {
     </div>
   );
 }
-

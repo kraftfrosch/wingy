@@ -14,7 +14,7 @@ const gfsDidot = GFS_Didot({
 });
 
 export const metadata: Metadata = {
-  title: "VoiceDate",
+  title: "Ember",
   description: "Connect with your voice",
 };
 

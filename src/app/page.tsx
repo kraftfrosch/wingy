@@ -28,7 +28,7 @@ export default async function Home() {
         </div>
 
         <h1 className="text-6xl font-bold tracking-tight text-foreground font-heading">
-          VoiceDate
+          Ember
         </h1>
 
         <p className="text-xl text-muted-foreground leading-relaxed max-w-md mx-auto">
