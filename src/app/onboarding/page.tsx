@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useOnboarding } from "./onboarding-context";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,20 @@ import { createSupabaseClient } from "@/lib/supabase-client";
 import { toast } from "sonner";
 
 export default function BasicInfoPage() {
-  const { data, updateData, nextStep } = useOnboarding();
-  const [step, setStep] = useState(0);
+  const { data, updateData, nextStep, currentStep, setCurrentStep } =
+    useOnboarding();
   const [isLoading, setIsLoading] = useState(false);
   const [supabase] = useState(() => createSupabaseClient());
+
+  // Calculate step index (0-based) from global step (1-based)
+  // Ensure we don't go out of bounds if state persists
+  const stepIndex = Math.min(Math.max(currentStep - 1, 0), 2);
+
+  useEffect(() => {
+    if (currentStep > 3) {
+      setCurrentStep(3);
+    }
+  }, [currentStep, setCurrentStep]);
 
   // Form states
   const [name, setName] = useState(data.displayName);
@@ -27,12 +37,12 @@ export default function BasicInfoPage() {
     updateData({ displayName: name, age, gender, lookingFor });
 
     // Check if current step is valid
-    if (step === 0 && (!name || !age)) return;
-    if (step === 1 && !gender) return;
-    if (step === 2 && !lookingFor) return;
+    if (stepIndex === 0 && (!name || !age)) return;
+    if (stepIndex === 1 && !gender) return;
+    if (stepIndex === 2 && !lookingFor) return;
 
-    if (step < 2) {
-      setStep(step + 1);
+    if (stepIndex < 2) {
+      setCurrentStep(currentStep + 1);
     } else {
       console.log("Submitting profile...", { name, age, gender, lookingFor });
       // Create profile before moving to conversation
@@ -67,6 +77,7 @@ export default function BasicInfoPage() {
           throw new Error("Failed to create profile");
         }
 
+        setCurrentStep(4);
         nextStep("/onboarding/conversation");
       } catch (error) {
         console.error("Profile creation error:", error);
@@ -97,7 +108,7 @@ export default function BasicInfoPage() {
             placeholder="e.g. Alex"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="text-lg py-6 rounded-2xl border-slate-200 focus:border-purple-500 focus:ring-purple-500"
+            className="text-lg py-6 rounded-md border-slate-200 focus:border-purple-500 focus:ring-purple-500"
           />
         </div>
 
@@ -111,7 +122,7 @@ export default function BasicInfoPage() {
             placeholder="24"
             value={age}
             onChange={(e) => setAge(e.target.value)}
-            className="text-lg py-6 rounded-2xl border-slate-200 focus:border-purple-500 focus:ring-purple-500"
+            className="text-lg py-6 rounded-md border-slate-200 focus:border-purple-500 focus:ring-purple-500"
           />
         </div>
       </div>
@@ -134,7 +145,7 @@ export default function BasicInfoPage() {
         {["Man", "Woman", "Non-binary", "Other"].map((g) => (
           <Label
             key={g}
-            className={`flex items-center justify-between px-6 py-4 rounded-2xl border-2 cursor-pointer transition-all ${
+            className={`flex items-center justify-between px-6 py-4 rounded-md border-2 cursor-pointer transition-all ${
               gender === g
                 ? "border-purple-600 bg-purple-50 text-purple-900"
                 : "border-slate-100 bg-white hover:border-slate-200"
@@ -171,7 +182,7 @@ export default function BasicInfoPage() {
         {["Men", "Women", "Everyone"].map((g) => (
           <Label
             key={g}
-            className={`flex items-center justify-between px-6 py-4 rounded-2xl border-2 cursor-pointer transition-all ${
+            className={`flex items-center justify-between px-6 py-4 rounded-md border-2 cursor-pointer transition-all ${
               lookingFor === g
                 ? "border-pink-500 bg-pink-50 text-pink-900"
                 : "border-slate-100 bg-white hover:border-slate-200"
@@ -194,15 +205,15 @@ export default function BasicInfoPage() {
 
   return (
     <div className="flex-1 flex flex-col p-8">
-      <div className="flex-1 flex flex-col justify-center">
+      <div className="flex-1 flex flex-col justify-start pt-4">
         <motion.div
-          key={step}
+          key={stepIndex}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
         >
-          {steps[step]}
+          {steps[stepIndex]}
         </motion.div>
       </div>
 
@@ -211,15 +222,15 @@ export default function BasicInfoPage() {
           onClick={handleNext}
           disabled={
             isLoading ||
-            (step === 0 && (!name || !age)) ||
-            (step === 1 && !gender) ||
-            (step === 2 && !lookingFor)
+            (stepIndex === 0 && (!name || !age)) ||
+            (stepIndex === 1 && !gender) ||
+            (stepIndex === 2 && !lookingFor)
           }
-          className="w-full py-7 text-lg rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200 transition-all active:scale-[0.98]"
+          className="w-full py-7 text-lg rounded-md bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/20 transition-all active:scale-[0.98]"
         >
           {isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin" />
-          ) : step === 2 ? (
+          ) : stepIndex === 2 ? (
             <>
               Let&apos;s Talk
               <ChevronRight className="ml-2 w-5 h-5" />

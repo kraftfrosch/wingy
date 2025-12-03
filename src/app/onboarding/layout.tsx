@@ -1,4 +1,5 @@
 import { OnboardingProvider } from "./onboarding-context";
+import { StepIndicator } from "./step-indicator";
 
 export default function OnboardingLayout({
   children,
@@ -13,6 +14,9 @@ export default function OnboardingLayout({
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[30%] bg-purple-200 rounded-full blur-3xl opacity-40 animate-pulse" />
           <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[30%] bg-pink-200 rounded-full blur-3xl opacity-40 animate-pulse" />
 
+          <div className="relative z-10">
+            <StepIndicator />
+          </div>
           <main className="flex-1 flex flex-col relative z-10">{children}</main>
         </div>
       </OnboardingProvider>
