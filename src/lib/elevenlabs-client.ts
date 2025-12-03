@@ -3,7 +3,7 @@
  * Handles all interactions with the ElevenLabs API
  */
 
-const ELEVEN_API_BASE = 'https://api.elevenlabs.io';
+const ELEVEN_API_BASE = "https://api.elevenlabs.io";
 
 export interface CreateVoiceCloneInput {
   name: string;
@@ -86,11 +86,11 @@ export async function elevenFetch(
   const apiKey = process.env.ELEVENLABS_API_KEY;
 
   if (!apiKey) {
-    throw new Error('ELEVENLABS_API_KEY environment variable is not set');
+    throw new Error("ELEVENLABS_API_KEY environment variable is not set");
   }
 
   const headers = {
-    'xi-api-key': apiKey,
+    "xi-api-key": apiKey,
     ...(init.headers || {}),
   };
 
@@ -116,19 +116,19 @@ export async function createVoiceClone(
   input: CreateVoiceCloneInput
 ): Promise<CreateVoiceCloneResponse> {
   const formData = new FormData();
-  formData.append('name', input.name);
-  
+  formData.append("name", input.name);
+
   if (input.description) {
-    formData.append('description', input.description);
+    formData.append("description", input.description);
   }
 
   // Append all audio files
   input.files.forEach((file) => {
-    formData.append('files', file);
+    formData.append("files", file);
   });
 
-  const res = await elevenFetch('/v1/voices/add', {
-    method: 'POST',
+  const res = await elevenFetch("/v1/voices/add", {
+    method: "POST",
     body: formData,
   });
 
@@ -143,22 +143,24 @@ export async function createAgent(
 ): Promise<CreateAgentResponse> {
   const body = {
     name: input.name,
-    agent: {
-      prompt: {
-        prompt: input.prompt,
+    conversation_config: {
+      agent: {
+        prompt: {
+          prompt: input.prompt,
+        },
+        first_message: input.firstMessage,
+        language: input.language ?? "en",
       },
-      first_message: input.firstMessage,
-      language: input.language ?? 'en',
-    },
-    tts: {
-      voice_id: input.voiceId,
+      tts: {
+        voice_id: input.voiceId,
+      },
     },
   };
 
-  const res = await elevenFetch('/v1/convai/agents/create', {
-    method: 'POST',
+  const res = await elevenFetch("/v1/convai/agents/create", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
   });

@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { elevenFetch } from "@/lib/elevenlabs-client";
+import { elevenFetch, createAgent } from "@/lib/elevenlabs-client";
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateObject } from "ai";
 import { z } from "zod";
+import {
+  generateAgentPrompt,
+  generateDefaultFirstMessage,
+} from "@/lib/agent-prompt-template";
 
 /**
  * POST /api/onboarding/analyze
  * Analyzes the onboarding conversation to generate profile prompts
+ * AND creates the ElevenLabs agent for the user
  */
 export async function POST(request: NextRequest) {
   try {
@@ -43,20 +48,16 @@ export async function POST(request: NextRequest) {
           .join("\n");
       } else {
         console.warn("No transcript found in response", transcriptData);
-        // We'll allow continuing even without transcript to not block the user,
-        // but the AI analysis will be limited.
         transcriptText = "No transcript available.";
       }
     } catch (e) {
       console.error("Could not fetch transcript:", e);
-      // Fallback text
       transcriptText = "Failed to retrieve transcript.";
     }
 
     // 2. Analyze with Vercel AI SDK (Anthropic)
     const { name, age, gender, lookingFor } = userInfo || {};
 
-    // Schema for the output
     const schema = z.object({
       user_profile_prompt: z
         .string()
@@ -104,8 +105,10 @@ export async function POST(request: NextRequest) {
 
       console.log("AI Analysis result:", object);
 
-      // 3. Update User Profile in Supabase
+      // 3. Update User Profile & Create Agent
       const authHeader = request.headers.get("authorization");
+      let agentId = null;
+
       if (authHeader?.startsWith("Bearer ")) {
         const token = authHeader.replace("Bearer ", "");
         const {
@@ -113,7 +116,39 @@ export async function POST(request: NextRequest) {
         } = await supabaseAdmin.auth.getUser(token);
 
         if (user) {
-          // Use update instead of upsert to preserve existing basic info
+          // A. Create the Agent immediately using the generated data
+          // Using provided default voice ID if no custom voice is present (we assume default for now)
+          const DEFAULT_VOICE_ID = "gJx1vCzNCD1EQHT212Ls";
+
+          try {
+            const prompt = generateAgentPrompt({
+              user_profile_prompt: object.user_profile_prompt,
+              user_preferences_prompt: object.user_preferences_prompt,
+              user_important_notes: object.user_important_notes,
+            });
+
+            const firstMessage = generateDefaultFirstMessage(name || "User");
+
+            const agentResponse = await createAgent({
+              name: `${name || "User"}'s Agent`,
+              voiceId: DEFAULT_VOICE_ID, // Use profile.cloned_voice_id in real flow if available
+              prompt,
+              firstMessage,
+              language: "en",
+            });
+
+            agentId = agentResponse.agent_id;
+            console.log("Agent created successfully:", agentId);
+          } catch (agentError) {
+            console.error(
+              "Failed to create agent during onboarding:",
+              agentError
+            );
+            // We continue to save the profile even if agent creation fails,
+            // so the user doesn't lose their onboarding progress.
+          }
+
+          // B. Update Profile with Analysis & Agent ID
           const { error: updateError } = await supabaseAdmin
             .from("user_profiles")
             .update({
@@ -121,6 +156,10 @@ export async function POST(request: NextRequest) {
               user_preferences_prompt: object.user_preferences_prompt,
               user_important_notes: object.user_important_notes,
               onboarding_completed: true,
+              cloned_agent_id: agentId, // Store the new agent ID
+              agent_ready: !!agentId,
+              // We also store the voice ID we used if one wasn't set, or we can leave it null until they clone
+              // cloned_voice_id: DEFAULT_VOICE_ID,
               updated_at: new Date().toISOString(),
             })
             .eq("user_id", user.id);
@@ -135,11 +174,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         ...object,
+        agentId,
       });
     } catch (aiError) {
-      console.error("AI Analysis failed:", aiError);
+      console.error("AI Analysis/Agent Creation failed:", aiError);
       return NextResponse.json(
-        { error: "Failed to analyze conversation" },
+        { error: "Failed to analyze conversation or create agent" },
         { status: 500 }
       );
     }
