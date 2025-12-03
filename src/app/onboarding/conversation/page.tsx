@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useConversation } from "@elevenlabs/react";
 import { useOnboarding } from "../onboarding-context";
@@ -16,6 +16,11 @@ export default function ConversationPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const supabase = createSupabaseClient();
 
+  // Audio recording refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const hasAgentStartedSpeakingRef = useRef(false);
+
   const conversation = useConversation({
     onConnect: () => console.log("Connected to onboarding agent"),
     onDisconnect: () => console.log("Disconnected from onboarding agent"),
@@ -28,10 +33,62 @@ export default function ConversationPage() {
 
   const { status, isSpeaking } = conversation;
 
+  // Toggle recording based on agent speaking state
+  useEffect(() => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder) return;
+
+    if (isSpeaking) {
+      hasAgentStartedSpeakingRef.current = true;
+      if (recorder.state === "recording") {
+        console.log("Agent speaking, pausing user recording...");
+        recorder.pause();
+      }
+    } else {
+      // Agent is NOT speaking
+      if (hasAgentStartedSpeakingRef.current) {
+        // Agent has spoken at least once, so it's safe to record user
+        if (recorder.state === "inactive") {
+          console.log("Agent finished first turn, starting recording...");
+          recorder.start(1000);
+        } else if (recorder.state === "paused") {
+          console.log("Agent stopped speaking, resuming user recording...");
+          recorder.resume();
+        }
+      }
+    }
+  }, [isSpeaking]);
+
+  const setupRecorder = (stream: MediaStream) => {
+    try {
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          console.log(`Captured audio chunk: ${event.data.size} bytes`);
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        console.log(
+          "MediaRecorder stopped. Total chunks:",
+          audioChunksRef.current.length
+        );
+      };
+
+      console.log("Recorder setup complete, waiting for agent to speak...");
+    } catch (error) {
+      console.error("Failed to setup media recorder:", error);
+    }
+  };
+
   const startConversation = useCallback(async () => {
     try {
       // Request mic permission first
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
       const agentId = process.env.NEXT_PUBLIC_ONBOARDING_AGENT_ID;
       if (!agentId) {
@@ -39,9 +96,12 @@ export default function ConversationPage() {
         return;
       }
 
+      // Setup recorder but don't start it yet
+      setupRecorder(stream);
+
       const id = await conversation.startSession({
         agentId,
-        connectionType: "webrtc", // Explicitly set connection type
+        connectionType: "webrtc",
       });
       setConversationId(id);
       setHasStarted(true);
@@ -51,26 +111,107 @@ export default function ConversationPage() {
     }
   }, [conversation]);
 
+  const uploadVoiceSample = async (): Promise<boolean> => {
+    console.log("Preparing to upload voice sample...");
+    console.log("Audio chunks recorded:", audioChunksRef.current.length);
+
+    if (!audioChunksRef.current.length) {
+      console.warn("No audio recorded for cloning");
+      return false;
+    }
+
+    const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+    console.log("Created audio blob:", audioBlob.size, "bytes", audioBlob.type);
+
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "recording.webm");
+    formData.append("name", `${data.displayName || "User"}'s Voice`);
+    formData.append("description", "Recorded during onboarding interview");
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.error("No session found for upload");
+        return false;
+      }
+
+      console.log("Sending request to /api/voice/clone...");
+      const response = await fetch("/api/voice/clone", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Voice cloning failed:", error);
+        return false;
+      }
+
+      const result = await response.json();
+      console.log("Voice cloned successfully:", result.voice_id);
+      return true;
+    } catch (error) {
+      console.error("Error uploading voice sample:", error);
+      return false;
+    }
+  };
+
+  const stopRecording = (): Promise<void> => {
+    return new Promise((resolve) => {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        mediaRecorderRef.current.onstop = () => {
+          console.log("Recorder stopped via promise wrapper");
+          resolve();
+        };
+        // Ensure we are not paused before stopping
+        if (mediaRecorderRef.current.state === "paused") {
+          mediaRecorderRef.current.resume();
+        }
+        mediaRecorderRef.current.requestData();
+        mediaRecorderRef.current.stop();
+      } else {
+        resolve();
+      }
+    });
+  };
+
   const endConversation = async () => {
-    // Capture the ID *before* ending the session, just in case the SDK clears it (though it usually persists)
-    // But we rely on stored state `conversationId` now
     if (!conversationId) {
       console.error("No conversation ID found");
       toast.error("Could not retrieve conversation details. Please try again.");
       return;
     }
 
+    setIsAnalyzing(true);
+
+    // 1. Stop recording and wait for it to finish processing
+    await stopRecording();
+
+    // 2. Stop ElevenLabs conversation
     await conversation.endSession();
-    handleAnalysis(conversationId);
+
+    // 3. Upload voice sample
+    toast.info("Creating your voice clone...");
+    await uploadVoiceSample();
+
+    // 4. Analyze conversation
+    await handleAnalysis(conversationId);
   };
 
   const handleAnalysis = async (id: string) => {
-    setIsAnalyzing(true);
     try {
       // Short delay to allow backend to index/process the audio/transcript
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Get current session for auth token
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -104,13 +245,11 @@ export default function ConversationPage() {
 
       const result = await response.json();
 
-      // Update context with the analyzed prompts
       updateData({
         ...data,
-        ...result, // Should contain user_profile_prompt, etc.
+        ...result,
       });
 
-      // Move to completion/feed
       nextStep("/feed");
     } catch (error) {
       console.error("Analysis error:", error);
@@ -142,7 +281,6 @@ export default function ConversationPage() {
           <AnimatePresence>
             {status === "connected" && (
               <>
-                {/* Outer pulsing ring */}
                 <motion.div
                   animate={{
                     scale: isSpeaking ? [1, 1.2, 1] : 1,
@@ -155,7 +293,6 @@ export default function ConversationPage() {
                   }}
                   className="absolute inset-0 bg-purple-400 rounded-full blur-xl"
                 />
-                {/* Inner active ring */}
                 <motion.div
                   animate={{
                     scale: isSpeaking ? [1, 1.1, 1] : 1,

@@ -116,9 +116,16 @@ export async function POST(request: NextRequest) {
         } = await supabaseAdmin.auth.getUser(token);
 
         if (user) {
-          // A. Create the Agent immediately using the generated data
-          // Using provided default voice ID if no custom voice is present (we assume default for now)
+          // A. Check for existing voice clone
+          const { data: profile } = await supabaseAdmin
+            .from("user_profiles")
+            .select("cloned_voice_id")
+            .eq("user_id", user.id)
+            .single();
+
+          // Use the cloned voice ID if available, otherwise use default
           const DEFAULT_VOICE_ID = "gJx1vCzNCD1EQHT212Ls";
+          const voiceId = profile?.cloned_voice_id || DEFAULT_VOICE_ID;
 
           try {
             const prompt = generateAgentPrompt({
@@ -131,7 +138,7 @@ export async function POST(request: NextRequest) {
 
             const agentResponse = await createAgent({
               name: `${name || "User"}'s Agent`,
-              voiceId: DEFAULT_VOICE_ID, // Use profile.cloned_voice_id in real flow if available
+              voiceId,
               prompt,
               firstMessage,
               language: "en",
@@ -144,8 +151,6 @@ export async function POST(request: NextRequest) {
               "Failed to create agent during onboarding:",
               agentError
             );
-            // We continue to save the profile even if agent creation fails,
-            // so the user doesn't lose their onboarding progress.
           }
 
           // B. Update Profile with Analysis & Agent ID
@@ -156,10 +161,8 @@ export async function POST(request: NextRequest) {
               user_preferences_prompt: object.user_preferences_prompt,
               user_important_notes: object.user_important_notes,
               onboarding_completed: true,
-              cloned_agent_id: agentId, // Store the new agent ID
+              cloned_agent_id: agentId,
               agent_ready: !!agentId,
-              // We also store the voice ID we used if one wasn't set, or we can leave it null until they clone
-              // cloned_voice_id: DEFAULT_VOICE_ID,
               updated_at: new Date().toISOString(),
             })
             .eq("user_id", user.id);
