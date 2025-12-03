@@ -1,8 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
 /**
  * Client-side Supabase client (respects RLS)
  * Safe to use in Client Components ("use client")
+ * Uses @supabase/ssr for proper cookie handling in Next.js App Router
  */
 export function createSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -17,6 +18,6 @@ export function createSupabaseClient() {
       "Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable"
     );
   }
-  return createClient(supabaseUrl, anonKey);
-}
 
+  return createBrowserClient(supabaseUrl, anonKey);
+}

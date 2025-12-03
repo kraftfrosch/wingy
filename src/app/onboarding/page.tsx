@@ -7,11 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
+import { createSupabaseClient } from "@/lib/supabase-client";
+import { toast } from "sonner";
 
 export default function BasicInfoPage() {
   const { data, updateData, nextStep } = useOnboarding();
   const [step, setStep] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [supabase] = useState(() => createSupabaseClient());
 
   // Form states
   const [name, setName] = useState(data.displayName);
@@ -19,7 +23,7 @@ export default function BasicInfoPage() {
   const [gender, setGender] = useState(data.gender);
   const [lookingFor, setLookingFor] = useState(data.lookingFor);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     updateData({ displayName: name, age, gender, lookingFor });
 
     // Check if current step is valid
@@ -30,7 +34,46 @@ export default function BasicInfoPage() {
     if (step < 2) {
       setStep(step + 1);
     } else {
-      nextStep("/onboarding/conversation");
+      console.log("Submitting profile...", { name, age, gender, lookingFor });
+      // Create profile before moving to conversation
+      setIsLoading(true);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        console.log("Session found:", !!session);
+
+        if (!session) {
+          toast.error("You must be logged in to continue");
+          return;
+        }
+
+        const response = await fetch("/api/profile/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            displayName: name,
+            age,
+            gender,
+            lookingFor,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to create profile");
+        }
+
+        nextStep("/onboarding/conversation");
+      } catch (error) {
+        console.error("Profile creation error:", error);
+        toast.error("Failed to save profile. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -167,14 +210,26 @@ export default function BasicInfoPage() {
         <Button
           onClick={handleNext}
           disabled={
+            isLoading ||
             (step === 0 && (!name || !age)) ||
             (step === 1 && !gender) ||
             (step === 2 && !lookingFor)
           }
           className="w-full py-7 text-lg rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200 transition-all active:scale-[0.98]"
         >
-          {step === 2 ? "Let's Talk" : "Continue"}
-          <ChevronRight className="ml-2 w-5 h-5" />
+          {isLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : step === 2 ? (
+            <>
+              Let&apos;s Talk
+              <ChevronRight className="ml-2 w-5 h-5" />
+            </>
+          ) : (
+            <>
+              Continue
+              <ChevronRight className="ml-2 w-5 h-5" />
+            </>
+          )}
         </Button>
       </div>
     </div>
