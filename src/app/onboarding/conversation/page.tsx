@@ -14,7 +14,30 @@ export default function ConversationPage() {
   const [hasStarted, setHasStarted] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [canEnd, setCanEnd] = useState(false);
+  const [progress, setProgress] = useState(0);
   const supabase = createSupabaseClient();
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (hasStarted && !canEnd) {
+      const startTime = Date.now();
+      const duration = 90000; // 90 seconds
+
+      interval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const newProgress = Math.min((elapsed / duration) * 100, 100);
+
+        setProgress(newProgress);
+
+        if (elapsed >= duration) {
+          setCanEnd(true);
+          clearInterval(interval);
+        }
+      }, 100);
+    }
+    return () => clearInterval(interval);
+  }, [hasStarted, canEnd]);
 
   useEffect(() => {
     setCurrentStep(4);
@@ -352,24 +375,34 @@ export default function ConversationPage() {
             Start Conversation
           </Button>
         ) : (
-          <Button
-            onClick={endConversation}
-            disabled={isAnalyzing}
-            variant="outline"
-            className="w-full py-8 text-lg rounded-md bg-secondary hover:bg-secondary/80 text-foreground border-transparent shadow-sm"
-          >
-            {isAnalyzing ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                Creating Profile...
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <PhoneOff className="w-5 h-5" />
-                Finish & Create Profile
-              </span>
+          <div className="relative w-full">
+            <Button
+              onClick={endConversation}
+              disabled={isAnalyzing || !canEnd}
+              variant="outline"
+              className="w-full py-8 text-lg rounded-md bg-secondary hover:bg-secondary/80 text-foreground border-transparent shadow-sm transition-all duration-200"
+            >
+              {isAnalyzing ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  Creating Profile...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <PhoneOff className="w-5 h-5" />
+                  Finish & Create Profile
+                </span>
+              )}
+            </Button>
+            {!canEnd && (
+              <div
+                className="absolute inset-0 rounded-md pointer-events-none border-2 border-primary z-20 transition-all duration-100 ease-linear"
+                style={{
+                  clipPath: `inset(0 ${100 - progress}% 0 0)`,
+                }}
+              />
             )}
-          </Button>
+          </div>
         )}
       </div>
     </div>
