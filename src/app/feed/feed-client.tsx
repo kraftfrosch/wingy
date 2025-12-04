@@ -271,6 +271,34 @@ export default function FeedClient({ user }: FeedClientProps) {
       });
 
       try {
+        // First, get matched user IDs to exclude from feed
+        const matchedUserIds: string[] = [];
+        
+        if (currentUserId) {
+          // Get users I've liked
+          const { data: myLikes } = await supabase
+            .from("user_likes")
+            .select("to_user_id")
+            .eq("from_user_id", currentUserId);
+
+          if (myLikes) {
+            const likedUserIds = myLikes.map((l) => l.to_user_id);
+
+            // Check which of them liked me back (mutual = match)
+            const { data: mutualLikes } = await supabase
+              .from("user_likes")
+              .select("from_user_id")
+              .eq("to_user_id", currentUserId)
+              .in("from_user_id", likedUserIds);
+
+            if (mutualLikes) {
+              matchedUserIds.push(...mutualLikes.map((l) => l.from_user_id));
+            }
+          }
+        }
+
+        console.log(`Excluding ${matchedUserIds.length} matched users from feed`);
+
         let query = supabase
           .from("user_profiles")
           .select("*")
@@ -293,9 +321,15 @@ export default function FeedClient({ user }: FeedClientProps) {
           `Found ${data?.length || 0} profiles, filtering by preferences...`
         );
 
-        const filteredProfiles = (data || []).filter((profile) =>
-          areProfilesCompatible(currentUserProfile, profile)
-        );
+        // Filter by compatibility AND exclude matched users
+        const filteredProfiles = (data || []).filter((profile) => {
+          // Exclude matched users
+          if (matchedUserIds.includes(profile.user_id)) {
+            console.log(`Excluding ${profile.display_name} - already matched`);
+            return false;
+          }
+          return areProfilesCompatible(currentUserProfile, profile);
+        });
 
         console.log(
           `After filtering: ${filteredProfiles.length} compatible profiles`
