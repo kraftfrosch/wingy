@@ -325,12 +325,18 @@ export default function ConversationPage() {
           className="space-y-4"
         >
           <h1 className="text-4xl font-bold text-foreground font-heading">
-            {hasStarted ? "Listening..." : "Let's get to know you"}
+            {status === "connecting" 
+              ? "Connecting..." 
+              : hasStarted 
+                ? "Listening..." 
+                : "Let's get to know you"}
           </h1>
           <p className="text-muted-foreground text-lg max-w-xs mx-auto leading-relaxed">
-            {hasStarted
-              ? "Tell me about yourself, your hobbies, and what makes you tick."
-              : "I'll ask a few questions to build your profile. Just be yourself!"}
+            {status === "connecting"
+              ? "Setting up your interview, just a moment..."
+              : hasStarted
+                ? "Tell me about yourself, your hobbies, and what makes you tick."
+                : "I'll ask a few questions to build your profile. Just be yourself!"}
           </p>
         </motion.div>
 
@@ -368,7 +374,7 @@ export default function ConversationPage() {
 
           <button
             onClick={!hasStarted ? startConversation : undefined}
-            disabled={hasStarted}
+            disabled={hasStarted || status === "connecting"}
             className="relative z-10 w-40 h-40 bg-card rounded-full shadow-2xl shadow-primary/10 flex items-center justify-center border border-white/20 backdrop-blur-sm cursor-pointer hover:scale-105 transition-transform disabled:cursor-default disabled:hover:scale-100"
           >
             {status === "connected" ? (
@@ -394,6 +400,11 @@ export default function ConversationPage() {
                   />
                 ))}
               </motion.div>
+            ) : status === "connecting" ? (
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs text-muted-foreground">Connecting...</span>
+              </div>
             ) : (
               <Mic className="w-12 h-12 text-muted-foreground/50" />
             )}
