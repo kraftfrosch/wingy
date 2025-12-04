@@ -136,11 +136,12 @@ export default function FeedClient({ user }: FeedClientProps) {
   // Helper: Normalize gender terms to a common format
   const normalizeGender = (value: string): string => {
     const v = value.toLowerCase().trim();
-    if (["woman", "women", "female", "f", "girl"].includes(v)) return "female";
-    if (["man", "men", "male", "m", "boy", "guy"].includes(v)) return "male";
-    if (["non-binary", "nonbinary", "nb", "enby", "non binary"].includes(v))
+M    if (["woman", "women", "female", "f", "girl", "girls", "lady", "ladies"].includes(v)) return "female";
+    if (["man", "men", "male", "m", "boy", "guy", "guys", "gentleman", "gentlemen"].includes(v)) return "male";
+    if (["non-binary", "nonbinary", "nb", "enby", "non binary", "other"].includes(v))
       return "non-binary";
-    if (["any", "everyone", "all", "both"].includes(v)) return "any";
+    if (["any", "everyone", "all", "both", "anyone", "everybody", "open", "no preference"].includes(v)) return "any";
+    console.log(`[Matching] Unknown gender/preference value: "${value}" (normalized: "${v}")`);
     return v;
   };
 
@@ -202,10 +203,14 @@ export default function FeedClient({ user }: FeedClientProps) {
 
     console.log(`Checking ${theirProfile.display_name}:`, {
       theirGender: theirProfile.gender,
+      theirGenderNormalized: normalizeGender(theirProfile.gender || ""),
       myLookingFor,
+      myLookingForNormalized: myLookingFor ? normalizeGender(String(myLookingFor)) : null,
       iWantThem,
       myGender: myProfile.gender,
+      myGenderNormalized: normalizeGender(myProfile.gender || ""),
       theirLookingFor,
+      theirLookingForNormalized: theirLookingFor ? normalizeGender(String(theirLookingFor)) : null,
       theyWantMe,
       ageCompatible,
       result: isCompatible ? "✅ SHOW" : "❌ HIDE",
@@ -224,9 +229,14 @@ export default function FeedClient({ user }: FeedClientProps) {
         return;
       }
 
-      console.log("Fetching profiles with preferences:", {
+      const myPrefs = currentUserProfile.onboarding_preferences;
+      const myLookingFor = myPrefs?.looking_for || myPrefs?.partner_gender;
+      console.log("=== CURRENT USER INFO ===", {
         myGender: currentUserProfile.gender,
-        myLookingFor: currentUserProfile.onboarding_preferences?.partner_gender,
+        myGenderNormalized: normalizeGender(currentUserProfile.gender || ""),
+        myLookingFor: myLookingFor,
+        myLookingForNormalized: myLookingFor ? normalizeGender(String(myLookingFor)) : null,
+        fullPrefs: myPrefs,
       });
 
       try {
