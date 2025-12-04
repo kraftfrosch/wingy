@@ -136,7 +136,7 @@ export default function FeedClient({ user }: FeedClientProps) {
   // Helper: Normalize gender terms to a common format
   const normalizeGender = (value: string): string => {
     const v = value.toLowerCase().trim();
-M    if (["woman", "women", "female", "f", "girl", "girls", "lady", "ladies"].includes(v)) return "female";
+    if (["woman", "women", "female", "f", "girl", "girls", "lady", "ladies"].includes(v)) return "female";
     if (["man", "men", "male", "m", "boy", "guy", "guys", "gentleman", "gentlemen"].includes(v)) return "male";
     if (["non-binary", "nonbinary", "nb", "enby", "non binary", "other"].includes(v))
       return "non-binary";
