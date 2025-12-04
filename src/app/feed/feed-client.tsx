@@ -1350,11 +1350,8 @@ export default function FeedClient({ user }: FeedClientProps) {
               <div className="text-center space-y-6">
                 <div>
                   <h2 className="text-2xl font-bold text-foreground font-heading">
-                    What do you think?
+                    Is there a spark?
                   </h2>
-                  <p className="text-muted-foreground mt-2">
-                    Would you like to match with {currentProfile.display_name}?
-                  </p>
                 </div>
 
                 <div className="flex items-center gap-4 bg-secondary p-4 rounded-lg">
@@ -1411,57 +1408,35 @@ export default function FeedClient({ user }: FeedClientProps) {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="bg-card rounded-xl w-full max-w-sm p-8 text-center border border-border"
+              className="bg-card rounded-xl w-full max-w-sm overflow-hidden border border-border flex flex-col"
             >
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring" }}
-                className="w-20 h-20 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-6"
-              >
-                <Sparkles className="w-10 h-10 text-primary-foreground" />
-              </motion.div>
+              {/* Spark Image */}
+              <div className="w-full aspect-square relative">
+                <img
+                  src="/spark.png"
+                  alt="Match celebration"
+                  className="w-full h-full object-cover"
+                />
+              </div>
 
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-3xl font-bold text-foreground font-heading mb-2"
-              >
-                It&apos;s a Match! 🎉
-              </motion.h2>
-
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="text-muted-foreground mb-6"
-              >
-                You and {newMatchProfile.display_name} liked each other!
-              </motion.p>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="flex gap-3"
-              >
-                <button
-                  onClick={() => setNewMatchProfile(null)}
-                  className="flex-1 py-4 bg-secondary hover:bg-secondary/80 text-foreground rounded-md font-semibold transition-colors"
-                >
-                  Keep Browsing
-                </button>
+              {/* Say Hi Button */}
+              <div className="p-6">
                 <button
                   onClick={() => {
-                    toast.info("Chat coming soon!");
+                    // Find the match in matches array and open their profile
+                    const match = matches.find(
+                      (m) => m.profile.user_id === newMatchProfile.user_id
+                    );
+                    if (match) {
+                      setSelectedMatch(match);
+                    }
                     setNewMatchProfile(null);
                   }}
-                  className="flex-1 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md font-semibold transition-colors"
+                  className="w-full py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md font-semibold transition-colors"
                 >
-                  Say Hi 👋
+                  Say hi
                 </button>
-              </motion.div>
+              </div>
             </motion.div>
           </motion.div>
         )}
