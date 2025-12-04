@@ -889,6 +889,36 @@ export default function FeedClient({ user }: FeedClientProps) {
     return `"Looking forward to connecting..."`;
   };
 
+  // Get profile picture path based on gender
+  const getProfilePicturePath = (profile: UserProfile, index: number = 0): string => {
+    const gender = profile.gender?.toLowerCase() || 'male';
+    let folder = 'male';
+    let maxPics = 3;
+    
+    if (gender === 'female' || gender === 'woman' || gender === 'women') {
+      folder = 'female';
+      maxPics = 3;
+    } else if (gender === 'non-binary' || gender === 'nonbinary' || gender === 'nb') {
+      folder = 'non-binary';
+      maxPics = 1;
+    }
+    
+    // Use user_id hash for consistent picture selection, fallback to index
+    let picIndex = index;
+    if (profile.user_id) {
+      // Simple hash of user_id for consistent picture selection
+      let hash = 0;
+      for (let i = 0; i < profile.user_id.length; i++) {
+        hash = ((hash << 5) - hash) + profile.user_id.charCodeAt(i);
+        hash = hash & hash; // Convert to 32-bit integer
+      }
+      picIndex = Math.abs(hash);
+    }
+    
+    const picNumber = (picIndex % maxPics) + 1;
+    return `/profiles/${folder}/profile${picNumber}.png`;
+  };
+
   const formatMatchTime = (dateStr: string): string => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -1141,9 +1171,13 @@ export default function FeedClient({ user }: FeedClientProps) {
                     className="w-full aspect-square relative overflow-hidden group cursor-pointer rounded-xl"
                   >
                     <img
-                      src={`/profiles/profile${(currentIndex % 3) + 1}.png`}
-                        alt={currentProfile.display_name}
+                      key={`feed-${currentProfile.user_id}-${currentIndex}`}
+                      src={getProfilePicturePath(currentProfile, currentIndex)}
+                      alt={currentProfile.display_name}
                       className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      onError={(e) => {
+                        console.error('Failed to load image:', e.currentTarget.src);
+                      }}
                     />
                     
                     {/* Voice Visualizer Overlay */}
@@ -1379,26 +1413,16 @@ export default function FeedClient({ user }: FeedClientProps) {
               </div>
 
               {/* Profile Photo / Avatar */}
-              <div
-                className={`h-72 ${
-                  CARD_COLORS[
-                    matches.indexOf(selectedMatch) % CARD_COLORS.length
-                  ]
-                } relative`}
-              >
-                {selectedMatch.profile.profile_photo_url ? (
-                  <img
-                    src={selectedMatch.profile.profile_photo_url}
-                    alt={selectedMatch.profile.display_name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-8xl font-bold text-foreground/10">
-                      {selectedMatch.profile.display_name.charAt(0)}
-                    </span>
-                  </div>
-                )}
+              <div className="h-72 relative">
+                <img
+                  key={`match-${selectedMatch.profile.user_id}`}
+                  src={getProfilePicturePath(selectedMatch.profile)}
+                  alt={selectedMatch.profile.display_name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error('Failed to load image:', e.currentTarget.src);
+                  }}
+                />
               </div>
 
               {/* Profile Content */}
@@ -1435,55 +1459,6 @@ export default function FeedClient({ user }: FeedClientProps) {
                     </div>
                   )}
 
-                {/* Bio / Summary */}
-                {(selectedMatch.profile.bio ||
-                  selectedMatch.profile.onboarding_summary) && (
-                  <div className="bg-secondary/50 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                      About
-                    </h3>
-                    <p className="text-foreground leading-relaxed">
-                      {selectedMatch.profile.bio ||
-                        selectedMatch.profile.onboarding_summary}
-                    </p>
-                  </div>
-                )}
-
-                {/* Profile Description (from AI analysis) */}
-                {selectedMatch.profile.user_profile_prompt && (
-                  <div className="bg-secondary/50 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                      Personality
-                    </h3>
-                    <p className="text-foreground leading-relaxed">
-                      {selectedMatch.profile.user_profile_prompt}
-                    </p>
-                  </div>
-                )}
-
-                {/* What they're looking for */}
-                {selectedMatch.profile.user_preferences_prompt && (
-                  <div className="bg-secondary/50 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                      Looking For
-                    </h3>
-                    <p className="text-foreground leading-relaxed">
-                      {selectedMatch.profile.user_preferences_prompt}
-                    </p>
-                  </div>
-                )}
-
-                {/* Important Notes */}
-                {selectedMatch.profile.user_important_notes && (
-                  <div className="bg-secondary/50 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                      Good to Know
-                    </h3>
-                    <p className="text-foreground leading-relaxed">
-                      {selectedMatch.profile.user_important_notes}
-                    </p>
-                  </div>
-                )}
 
                 {/* Talk Time Stats */}
                 {(selectedMatch.total_call_duration_seconds ?? 0) > 0 && (
@@ -1611,22 +1586,16 @@ export default function FeedClient({ user }: FeedClientProps) {
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  CARD_COLORS[matches.indexOf(selectedMatch) % CARD_COLORS.length]
-                }`}
-              >
-                {selectedMatch.profile.profile_photo_url ? (
-                  <img
-                    src={selectedMatch.profile.profile_photo_url}
-                    alt={selectedMatch.profile.display_name}
-                    className="w-full h-full object-cover rounded-full"
-                  />
-                ) : (
-                  <span className="text-sm font-semibold text-foreground/60">
-                    {selectedMatch.profile.display_name.charAt(0)}
-                  </span>
-                )}
+              <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden">
+                <img
+                  key={`chat-${selectedMatch.profile.user_id}`}
+                  src={getProfilePicturePath(selectedMatch.profile)}
+                  alt={selectedMatch.profile.display_name}
+                  className="w-full h-full object-cover rounded-full"
+                  onError={(e) => {
+                    console.error('Failed to load image:', e.currentTarget.src);
+                  }}
+                />
               </div>
               <div className="flex-1">
                 <h1 className="font-semibold text-foreground">
