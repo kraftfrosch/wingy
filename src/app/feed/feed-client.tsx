@@ -271,7 +271,7 @@ export default function FeedClient({ user }: FeedClientProps) {
       });
 
       try {
-        // First, get matched user IDs to exclude from feed
+        // Get users I've matched with (mutual likes) to exclude from feed
         const matchedUserIds: string[] = [];
         
         if (currentUserId) {
@@ -281,7 +281,7 @@ export default function FeedClient({ user }: FeedClientProps) {
             .select("to_user_id")
             .eq("from_user_id", currentUserId);
 
-          if (myLikes) {
+          if (myLikes && myLikes.length > 0) {
             const likedUserIds = myLikes.map((l) => l.to_user_id);
 
             // Check which of them liked me back (mutual = match)
@@ -323,7 +323,7 @@ export default function FeedClient({ user }: FeedClientProps) {
 
         // Filter by compatibility AND exclude matched users
         const filteredProfiles = (data || []).filter((profile) => {
-          // Exclude matched users
+          // Exclude users I've already matched with
           if (matchedUserIds.includes(profile.user_id)) {
             console.log(`Excluding ${profile.display_name} - already matched`);
             return false;
@@ -347,7 +347,7 @@ export default function FeedClient({ user }: FeedClientProps) {
     if (currentUserId && currentUserProfile) {
       fetchProfiles();
     }
-  }, [supabase, currentUserId, currentUserProfile]);
+  }, [supabase, currentUserId, currentUserProfile, matches.length]);
 
   // Fetch matches
   const fetchMatches = useCallback(async () => {
