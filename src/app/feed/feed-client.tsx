@@ -19,6 +19,7 @@ import {
   Settings,
   Play,
   Loader2,
+  Music,
 } from "lucide-react";
 import { useConversation } from "@elevenlabs/react";
 import { createSupabaseClient } from "@/lib/supabase-client";
@@ -78,6 +79,7 @@ export default function FeedClient({ user }: FeedClientProps) {
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [isMusicLoading, setIsMusicLoading] = useState(false);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [isMusicEnabled, setIsMusicEnabled] = useState(true);
   const callStartTimeRef = useRef<number | null>(null);
   const lastCallDurationRef = useRef<number>(0);
   const matchesDropdownRef = useRef<HTMLDivElement>(null);
@@ -1096,7 +1098,79 @@ export default function FeedClient({ user }: FeedClientProps) {
 
     await conversation.endSession();
     setShowDecisionModal(true);
+    // Note: Music keeps playing until user moves to next profile
   }, [conversation]);
+
+  // Start background music for a profile
+  const startBackgroundMusic = useCallback(async (profile: UserProfile) => {
+    // Clear any existing music first
+    clearCurrentMusic();
+
+    try {
+      let musicUrl = profile.background_music_url;
+
+      // If no music exists, generate it
+      if (!musicUrl) {
+        console.log(`No music for ${profile.display_name}, generating...`);
+        setIsMusicLoading(true);
+        
+        const response = await fetch("/api/music/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: profile.user_id }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          musicUrl = data.music_url;
+          console.log(`Music generated: ${musicUrl}`);
+          
+          // Update the profile in state with the new music URL
+          setProfiles(prev => prev.map(p => 
+            p.user_id === profile.user_id 
+              ? { ...p, background_music_url: musicUrl } 
+              : p
+          ));
+        } else {
+          console.warn("Failed to generate music, continuing without it");
+          setIsMusicLoading(false);
+          return;
+        }
+        setIsMusicLoading(false);
+      }
+
+      if (musicUrl) {
+        const audio = new Audio(musicUrl);
+        audio.loop = true;
+        audio.volume = 0.08; // Low volume for background
+        musicAudioRef.current = audio;
+
+        audio.onerror = () => {
+          console.warn("Failed to play background music");
+          setIsMusicPlaying(false);
+        };
+
+        await audio.play();
+        setIsMusicPlaying(true);
+        console.log(`Playing background music for ${profile.display_name}`);
+      }
+    } catch (error) {
+      console.warn("Error starting background music:", error);
+      setIsMusicLoading(false);
+    }
+  }, [clearCurrentMusic]);
+
+  // Play music when viewing a new profile (if enabled)
+  useEffect(() => {
+    if (currentProfile && !loading && isMusicEnabled) {
+      startBackgroundMusic(currentProfile);
+    }
+    
+    // Cleanup when profile changes or component unmounts
+    return () => {
+      clearCurrentMusic();
+    };
+  }, [currentProfile?.user_id, loading, isMusicEnabled]); // Only trigger on profile change or music toggle
 
   // Start or end conversation with agent
   const toggleCall = useCallback(async () => {
@@ -2048,6 +2122,32 @@ export default function FeedClient({ user }: FeedClientProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Music Toggle - Bottom Right */}
+      <button
+        onClick={() => {
+          if (isMusicEnabled) {
+            clearCurrentMusic();
+            setIsMusicEnabled(false);
+          } else {
+            setIsMusicEnabled(true);
+            // Music will start automatically via useEffect
+          }
+        }}
+        className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-card/80 backdrop-blur-sm border border-border shadow-lg flex items-center justify-center hover:bg-card transition-colors z-40"
+        title={isMusicEnabled ? "Mute music" : "Unmute music"}
+      >
+        {isMusicEnabled ? (
+          <Music className="w-5 h-5 text-foreground" />
+        ) : (
+          <div className="relative">
+            <Music className="w-5 h-5 text-muted-foreground" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-7 h-0.5 bg-muted-foreground rotate-45" />
+            </div>
+          </div>
+        )}
+      </button>
     </div>
   );
 }

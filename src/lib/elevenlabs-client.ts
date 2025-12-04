@@ -76,6 +76,15 @@ export interface CreateAgentResponse {
   [key: string]: unknown;
 }
 
+export interface GenerateMusicInput {
+  prompt: string;
+  duration_seconds?: number; // 5-180 seconds
+}
+
+export interface GenerateMusicResponse {
+  audio_url: string;
+}
+
 /**
  * Fetches from ElevenLabs API with authentication
  */
@@ -166,4 +175,68 @@ export async function createAgent(
   });
 
   return res.json();
+}
+
+/**
+ * Generates background music based on a text prompt
+ * Uses ElevenLabs Music Generation API
+ */
+export async function generateMusic(
+  input: GenerateMusicInput
+): Promise<Buffer> {
+  const body = {
+    prompt: input.prompt,
+    duration_seconds: input.duration_seconds ?? 60,
+    prompt_influence: 0.5,
+  };
+
+  const res = await elevenFetch("/v1/music", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  // Music API returns audio data directly
+  const arrayBuffer = await res.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+/**
+ * Generates a music prompt based on user personality
+ */
+export function generateMusicPrompt(profile: {
+  display_name: string;
+  user_profile_prompt?: string | null;
+  onboarding_summary?: string | null;
+  onboarding_tags?: string[] | null;
+}): string {
+  const tags = profile.onboarding_tags?.slice(0, 3).join(", ") || "";
+  const summary = profile.onboarding_summary || profile.user_profile_prompt || "";
+  
+  // Create a mood-based prompt from the personality
+  const summaryLower = summary.toLowerCase();
+  
+  let mood = "warm and inviting";
+  let style = "acoustic lo-fi";
+  
+  if (summaryLower.includes("adventur") || summaryLower.includes("travel") || summaryLower.includes("outdoor")) {
+    mood = "uplifting and adventurous";
+    style = "indie folk";
+  } else if (summaryLower.includes("creative") || summaryLower.includes("art") || summaryLower.includes("music")) {
+    mood = "dreamy and creative";
+    style = "ambient electronic";
+  } else if (summaryLower.includes("fun") || summaryLower.includes("social") || summaryLower.includes("party")) {
+    mood = "upbeat and cheerful";
+    style = "tropical house";
+  } else if (summaryLower.includes("calm") || summaryLower.includes("relax") || summaryLower.includes("peace")) {
+    mood = "peaceful and serene";
+    style = "ambient piano";
+  } else if (summaryLower.includes("confiden") || summaryLower.includes("ambitio") || summaryLower.includes("driven")) {
+    mood = "confident and smooth";
+    style = "jazzy R&B";
+  }
+  
+  return `Create ${mood} background music in a ${style} style. ${tags ? `Themes: ${tags}.` : ""} Instrumental only, suitable for a casual conversation. Loopable, no vocals.`;
 }

@@ -24,6 +24,7 @@ export interface UserProfile {
   // Voice and agent IDs from ElevenLabs
   cloned_voice_id?: string | null;
   cloned_agent_id?: string | null;
+  background_music_url?: string | null;
 
   // Agent prompt fields
   user_profile_prompt?: string | null;
