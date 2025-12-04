@@ -634,6 +634,84 @@ export default function FeedClient({ user }: FeedClientProps) {
     };
   }, [showChat, selectedMatch?.conversation_id, supabase, currentUserId]);
 
+  // Global subscription for new messages (updates unread counts)
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const channel = supabase
+      .channel("global-messages")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const newMsg = payload.new as Message;
+          // If message is not from us and we're not viewing that chat
+          if (newMsg.sender_id !== currentUserId) {
+            // Refresh matches to update unread counts
+            fetchMatches();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId, supabase, fetchMatches]);
+
+  // Subscribe to new likes (for real-time match detection)
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const channel = supabase
+      .channel("new-likes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "user_likes",
+          filter: `to_user_id=eq.${currentUserId}`,
+        },
+        async (payload) => {
+          console.log("New like received:", payload);
+          // Someone liked us - check if it's a match
+          const newLike = payload.new as { from_user_id: string; to_user_id: string };
+          
+          // Check if we already liked them back
+          const { data: ourLike } = await supabase
+            .from("user_likes")
+            .select("id")
+            .eq("from_user_id", currentUserId)
+            .eq("to_user_id", newLike.from_user_id)
+            .single();
+
+          if (ourLike) {
+            // It's a match! Refresh matches and show celebration
+            const { data: matchedProfile } = await supabase
+              .from("user_profiles")
+              .select("*")
+              .eq("user_id", newLike.from_user_id)
+              .single();
+
+            if (matchedProfile) {
+              setNewMatchProfile(matchedProfile);
+              fetchMatches();
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId, supabase, fetchMatches]);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
