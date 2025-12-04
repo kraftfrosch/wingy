@@ -173,13 +173,17 @@ export default function FeedClient({ user }: FeedClientProps) {
     const myPrefs = myProfile.onboarding_preferences;
     const theirPrefs = theirProfile.onboarding_preferences;
 
+    // Check both possible field names: looking_for (from onboarding) or partner_gender
+    const myLookingFor = myPrefs?.looking_for || myPrefs?.partner_gender;
+    const theirLookingFor = theirPrefs?.looking_for || theirPrefs?.partner_gender;
+
     const iWantThem = genderMatchesPreference(
       theirProfile.gender,
-      myPrefs?.partner_gender
+      myLookingFor as string | string[] | undefined
     );
     const theyWantMe = genderMatchesPreference(
       myProfile.gender,
-      theirPrefs?.partner_gender
+      theirLookingFor as string | string[] | undefined
     );
 
     let ageCompatible = true;
@@ -198,10 +202,10 @@ export default function FeedClient({ user }: FeedClientProps) {
 
     console.log(`Checking ${theirProfile.display_name}:`, {
       theirGender: theirProfile.gender,
-      myLookingFor: myPrefs?.partner_gender,
+      myLookingFor,
       iWantThem,
       myGender: myProfile.gender,
-      theirLookingFor: theirPrefs?.partner_gender,
+      theirLookingFor,
       theyWantMe,
       ageCompatible,
       result: isCompatible ? "✅ SHOW" : "❌ HIDE",

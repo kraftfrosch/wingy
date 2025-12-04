@@ -45,7 +45,8 @@ export interface UserProfile {
 
 export interface OnboardingPreferences {
   // What they're looking for in a partner
-  partner_gender?: string | string[];
+  looking_for?: string | string[];  // Primary field from onboarding
+  partner_gender?: string | string[];  // Legacy/alternative field
   partner_age_range?: {
     min?: number;
     max?: number;
