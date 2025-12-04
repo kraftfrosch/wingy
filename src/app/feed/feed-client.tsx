@@ -940,9 +940,7 @@ export default function FeedClient({ user }: FeedClientProps) {
 
       setTimeout(() => {
         setSwipeDirection(null);
-        if (currentIndex < profiles.length - 1) {
-          setCurrentIndex((prev) => prev + 1);
-        }
+        setCurrentIndex((prev) => prev + 1);
       }, 300);
     },
     [currentProfile, currentIndex, profiles.length, saveLike]
@@ -956,9 +954,7 @@ export default function FeedClient({ user }: FeedClientProps) {
 
     setTimeout(() => {
       setSwipeDirection(null);
-      if (currentIndex < profiles.length - 1) {
-        setCurrentIndex((prev) => prev + 1);
-      }
+      setCurrentIndex((prev) => prev + 1);
     }, 300);
   }, [currentProfile, currentIndex, profiles.length]);
 
@@ -975,9 +971,7 @@ export default function FeedClient({ user }: FeedClientProps) {
 
     setTimeout(() => {
       setSwipeDirection(null);
-      if (currentIndex < profiles.length - 1) {
-        setCurrentIndex((prev) => prev + 1);
-      }
+      setCurrentIndex((prev) => prev + 1);
     }, 300);
   }, [currentProfile, currentIndex, profiles.length, saveLike]);
 
