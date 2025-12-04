@@ -16,12 +16,13 @@ import {
   MessageCircle,
   ArrowLeft,
   Clock,
+  Send,
 } from "lucide-react";
 import { useConversation } from "@elevenlabs/react";
 import { createSupabaseClient } from "@/lib/supabase-client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { UserProfile, MatchWithProfile } from "@/types/profile";
+import type { UserProfile, MatchWithProfile, Message } from "@/types/profile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,9 +69,15 @@ export default function FeedClient({ user }: FeedClientProps) {
   const [selectedMatch, setSelectedMatch] = useState<MatchWithProfile | null>(
     null
   );
+  const [showChat, setShowChat] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const callStartTimeRef = useRef<number | null>(null);
   const lastCallDurationRef = useRef<number>(0);
   const matchesDropdownRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const supabase = createSupabaseClient();
   const currentUserId = user?.id;
@@ -401,6 +408,25 @@ export default function FeedClient({ user }: FeedClientProps) {
         return;
       }
 
+      // Get conversations for unread counts
+      const { data: conversations } = await supabase
+        .from("conversations")
+        .select("id, user1_id, user2_id")
+        .or(`user1_id.eq.${currentUserId},user2_id.eq.${currentUserId}`);
+
+      // Get unread message counts per conversation
+      const { data: unreadCounts } = await supabase
+        .from("messages")
+        .select("conversation_id")
+        .neq("sender_id", currentUserId)
+        .is("read_at", null);
+
+      // Count unreads per conversation
+      const unreadByConversation: Record<string, number> = {};
+      unreadCounts?.forEach((msg) => {
+        unreadByConversation[msg.conversation_id] = (unreadByConversation[msg.conversation_id] || 0) + 1;
+      });
+
       const matchesWithProfiles: MatchWithProfile[] = mutualLikes
         .map((like): MatchWithProfile | null => {
           const profile = matchedProfiles?.find(
@@ -412,6 +438,13 @@ export default function FeedClient({ user }: FeedClientProps) {
           const myLike = myLikes.find((l) => l.to_user_id === like.from_user_id);
           const myCallDuration = myLike?.call_duration_seconds || 0;
           const theirCallDuration = like.call_duration_seconds || 0;
+
+          // Find conversation for this match
+          const conversation = conversations?.find(
+            (c) =>
+              (c.user1_id === currentUserId && c.user2_id === like.from_user_id) ||
+              (c.user2_id === currentUserId && c.user1_id === like.from_user_id)
+          );
           
           return {
             user_id: currentUserId,
@@ -421,6 +454,8 @@ export default function FeedClient({ user }: FeedClientProps) {
             my_call_duration_seconds: myCallDuration,
             their_call_duration_seconds: theirCallDuration,
             total_call_duration_seconds: myCallDuration + theirCallDuration,
+            conversation_id: conversation?.id,
+            unread_count: conversation ? (unreadByConversation[conversation.id] || 0) : 0,
           };
         })
         .filter((m): m is MatchWithProfile => m !== null)
@@ -428,6 +463,10 @@ export default function FeedClient({ user }: FeedClientProps) {
           (a, b) =>
             new Date(b.matched_at).getTime() - new Date(a.matched_at).getTime()
         );
+
+      // Calculate total unread count
+      const totalUnread = matchesWithProfiles.reduce((sum, m) => sum + (m.unread_count || 0), 0);
+      setTotalUnreadCount(totalUnread);
 
       setMatches(matchesWithProfiles);
     } catch (err) {
@@ -440,6 +479,186 @@ export default function FeedClient({ user }: FeedClientProps) {
       fetchMatches();
     }
   }, [currentUserId, fetchMatches]);
+
+  // Get or create conversation for a match
+  const getOrCreateConversation = useCallback(
+    async (otherUserId: string): Promise<string | null> => {
+      if (!currentUserId) return null;
+
+      // Check if conversation exists
+      const { data: existing } = await supabase
+        .from("conversations")
+        .select("id")
+        .or(
+          `and(user1_id.eq.${currentUserId},user2_id.eq.${otherUserId}),and(user1_id.eq.${otherUserId},user2_id.eq.${currentUserId})`
+        )
+        .single();
+
+      if (existing) return existing.id;
+
+      // Create new conversation
+      const { data: newConv, error } = await supabase
+        .from("conversations")
+        .insert({
+          user1_id: currentUserId,
+          user2_id: otherUserId,
+        })
+        .select("id")
+        .single();
+
+      if (error) {
+        console.error("Error creating conversation:", error);
+        return null;
+      }
+
+      return newConv?.id || null;
+    },
+    [supabase, currentUserId]
+  );
+
+  // Fetch messages for a conversation
+  const fetchMessages = useCallback(
+    async (conversationId: string) => {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching messages:", error);
+        return;
+      }
+
+      setMessages(data || []);
+
+      // Mark unread messages as read
+      if (currentUserId) {
+        await supabase
+          .from("messages")
+          .update({ read_at: new Date().toISOString() })
+          .eq("conversation_id", conversationId)
+          .neq("sender_id", currentUserId)
+          .is("read_at", null);
+
+        // Update unread count for this match
+        setMatches((prev) =>
+          prev.map((m) =>
+            m.conversation_id === conversationId ? { ...m, unread_count: 0 } : m
+          )
+        );
+        
+        // Recalculate total unread
+        setTotalUnreadCount((prev) => {
+          const match = matches.find((m) => m.conversation_id === conversationId);
+          return Math.max(0, prev - (match?.unread_count || 0));
+        });
+      }
+    },
+    [supabase, currentUserId, matches]
+  );
+
+  // Send a message
+  const sendMessage = useCallback(
+    async (conversationId: string, content: string) => {
+      if (!currentUserId || !content.trim()) return;
+
+      setSendingMessage(true);
+      try {
+        const { data, error } = await supabase
+          .from("messages")
+          .insert({
+            conversation_id: conversationId,
+            sender_id: currentUserId,
+            content: content.trim(),
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error sending message:", error);
+          toast.error("Failed to send message");
+          return;
+        }
+
+        setMessages((prev) => [...prev, data]);
+        setNewMessage("");
+      } finally {
+        setSendingMessage(false);
+      }
+    },
+    [supabase, currentUserId]
+  );
+
+  // Subscribe to real-time messages when chat is open
+  useEffect(() => {
+    if (!showChat || !selectedMatch?.conversation_id) return;
+
+    const channel = supabase
+      .channel(`messages:${selectedMatch.conversation_id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${selectedMatch.conversation_id}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as Message;
+          // Only add if not from us (we already added it optimistically)
+          if (newMsg.sender_id !== currentUserId) {
+            setMessages((prev) => [...prev, newMsg]);
+            // Mark as read since we're viewing
+            supabase
+              .from("messages")
+              .update({ read_at: new Date().toISOString() })
+              .eq("id", newMsg.id);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [showChat, selectedMatch?.conversation_id, supabase, currentUserId]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Open chat for a match
+  const openChat = useCallback(
+    async (match: MatchWithProfile) => {
+      let conversationId: string | undefined = match.conversation_id;
+
+      if (!conversationId) {
+        const newConvId = await getOrCreateConversation(match.matched_with_user_id);
+        if (newConvId) {
+          conversationId = newConvId;
+          // Update match with conversation ID
+          setMatches((prev) =>
+            prev.map((m) =>
+              m.matched_with_user_id === match.matched_with_user_id
+                ? { ...m, conversation_id: conversationId }
+                : m
+            )
+          );
+          setSelectedMatch({ ...match, conversation_id: conversationId });
+        }
+      }
+
+      if (conversationId) {
+        await fetchMessages(conversationId);
+        setShowChat(true);
+      } else {
+        toast.error("Could not open chat");
+      }
+    },
+    [getOrCreateConversation, fetchMessages]
+  );
 
   // Save like to database
   const saveLike = useCallback(
@@ -724,10 +943,10 @@ export default function FeedClient({ user }: FeedClientProps) {
                 <div className="w-10 h-10 rounded-md bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors">
                   <Sparkles className="w-5 h-5 text-foreground" />
                 </div>
-                {matches.length > 0 && (
-                  <div className="absolute -top-2 -right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center border-2 border-background">
+                {(matches.length > 0 || totalUnreadCount > 0) && (
+                  <div className={`absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center border-2 border-background ${totalUnreadCount > 0 ? 'bg-destructive' : 'bg-primary'}`}>
                     <span className="text-[10px] font-bold text-primary-foreground">
-                      {matches.length}
+                      {totalUnreadCount > 0 ? totalUnreadCount : matches.length}
                     </span>
                   </div>
                 )}
@@ -805,7 +1024,15 @@ export default function FeedClient({ user }: FeedClientProps) {
                                 Matched {formatMatchTime(match.matched_at)}
                               </p>
                             </div>
-                            <div className="w-2 h-2 bg-green-500 rounded-full" />
+                            {match.unread_count && match.unread_count > 0 ? (
+                              <div className="w-5 h-5 bg-destructive rounded-full flex items-center justify-center">
+                                <span className="text-[10px] font-bold text-white">
+                                  {match.unread_count}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="w-2 h-2 bg-green-500 rounded-full" />
+                            )}
                           </button>
                         ))}
                       </div>
@@ -1461,7 +1688,9 @@ export default function FeedClient({ user }: FeedClientProps) {
                   </button>
                   <button
                     onClick={() => {
-                      toast.info("Chat coming soon!");
+                      if (selectedMatch) {
+                        openChat(selectedMatch);
+                      }
                     }}
                     className="flex-1 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors"
                   >
@@ -1471,6 +1700,138 @@ export default function FeedClient({ user }: FeedClientProps) {
                 </div>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Chat Modal */}
+      <AnimatePresence>
+        {showChat && selectedMatch && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-background z-[60] flex flex-col"
+          >
+            {/* Chat Header */}
+            <div className="bg-background/80 backdrop-blur-md px-4 py-4 flex items-center gap-4 border-b border-border/40">
+              <button
+                onClick={() => {
+                  setShowChat(false);
+                  setMessages([]);
+                }}
+                className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  CARD_COLORS[matches.indexOf(selectedMatch) % CARD_COLORS.length]
+                }`}
+              >
+                {selectedMatch.profile.profile_photo_url ? (
+                  <img
+                    src={selectedMatch.profile.profile_photo_url}
+                    alt={selectedMatch.profile.display_name}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <span className="text-sm font-semibold text-foreground/60">
+                    {selectedMatch.profile.display_name.charAt(0)}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1">
+                <h1 className="font-semibold text-foreground">
+                  {selectedMatch.profile.display_name}
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  Matched {formatMatchTime(selectedMatch.matched_at)}
+                </p>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                    <MessageCircle className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-foreground mb-1">
+                    Start the conversation
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-xs">
+                    Say hi to {selectedMatch.profile.display_name}! You matched
+                    because you both liked each other.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${
+                        msg.sender_id === currentUserId
+                          ? "justify-end"
+                          : "justify-start"
+                      }`}
+                    >
+                      <div
+                        className={`max-w-[75%] px-4 py-2 rounded-2xl ${
+                          msg.sender_id === currentUserId
+                            ? "bg-primary text-primary-foreground rounded-br-md"
+                            : "bg-secondary text-foreground rounded-bl-md"
+                        }`}
+                      >
+                        <p className="text-sm">{msg.content}</p>
+                        <p
+                          className={`text-[10px] mt-1 ${
+                            msg.sender_id === currentUserId
+                              ? "text-primary-foreground/60"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {new Date(msg.created_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="p-4 border-t border-border/40 bg-background">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (selectedMatch.conversation_id && newMessage.trim()) {
+                    sendMessage(selectedMatch.conversation_id, newMessage);
+                  }
+                }}
+                className="flex gap-2"
+              >
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type a message..."
+                  className="flex-1 px-4 py-3 bg-secondary rounded-full text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <button
+                  type="submit"
+                  disabled={sendingMessage || !newMessage.trim()}
+                  className="w-12 h-12 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-full flex items-center justify-center transition-colors"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </form>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
