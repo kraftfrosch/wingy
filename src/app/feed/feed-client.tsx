@@ -80,6 +80,7 @@ export default function FeedClient({ user }: FeedClientProps) {
   const [isMusicLoading, setIsMusicLoading] = useState(false);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [isMusicEnabled, setIsMusicEnabled] = useState(true);
+  const [musicNeedsInteraction, setMusicNeedsInteraction] = useState(false);
   const callStartTimeRef = useRef<number | null>(null);
   const lastCallDurationRef = useRef<number>(0);
   const matchesDropdownRef = useRef<HTMLDivElement>(null);
@@ -430,8 +431,10 @@ export default function FeedClient({ user }: FeedClientProps) {
       });
 
       try {
-        // Get users I've matched with (mutual likes) to exclude from feed
-        const matchedUserIds: string[] = [];
+        // Get users I've already liked (to exclude from feed)
+        const likedByMeIds: string[] = [];
+        // Get users who have liked me (to show first)
+        const likedMeIds: string[] = [];
 
         if (currentUserId) {
           // Get users I've liked
@@ -440,24 +443,26 @@ export default function FeedClient({ user }: FeedClientProps) {
             .select("to_user_id")
             .eq("from_user_id", currentUserId);
 
-          if (myLikes && myLikes.length > 0) {
-            const likedUserIds = myLikes.map((l) => l.to_user_id);
+          if (myLikes) {
+            likedByMeIds.push(...myLikes.map((l) => l.to_user_id));
+          }
 
-            // Check which of them liked me back (mutual = match)
-            const { data: mutualLikes } = await supabase
-              .from("user_likes")
-              .select("from_user_id")
-              .eq("to_user_id", currentUserId)
-              .in("from_user_id", likedUserIds);
+          // Get users who have liked me
+          const { data: likesOnMe } = await supabase
+            .from("user_likes")
+            .select("from_user_id")
+            .eq("to_user_id", currentUserId);
 
-            if (mutualLikes) {
-              matchedUserIds.push(...mutualLikes.map((l) => l.from_user_id));
-            }
+          if (likesOnMe) {
+            likedMeIds.push(...likesOnMe.map((l) => l.from_user_id));
           }
         }
 
         console.log(
-          `Excluding ${matchedUserIds.length} matched users from feed`
+          `Excluding ${likedByMeIds.length} already-liked users from feed`
+        );
+        console.log(
+          `Prioritizing ${likedMeIds.length} users who liked me`
         );
 
         let query = supabase
@@ -482,21 +487,31 @@ export default function FeedClient({ user }: FeedClientProps) {
           `Found ${data?.length || 0} profiles, filtering by preferences...`
         );
 
-        // Filter by compatibility AND exclude matched users
+        // Filter by compatibility AND exclude already-liked users
         const filteredProfiles = (data || []).filter((profile) => {
-          // Exclude users I've already matched with
-          if (matchedUserIds.includes(profile.user_id)) {
-            console.log(`Excluding ${profile.display_name} - already matched`);
+          // Exclude users I've already liked
+          if (likedByMeIds.includes(profile.user_id)) {
+            console.log(`Excluding ${profile.display_name} - already liked`);
             return false;
           }
           return areProfilesCompatible(currentUserProfile, profile);
         });
 
+        // Sort: people who liked me first, then the rest
+        const sortedProfiles = filteredProfiles.sort((a, b) => {
+          const aLikedMe = likedMeIds.includes(a.user_id);
+          const bLikedMe = likedMeIds.includes(b.user_id);
+          
+          if (aLikedMe && !bLikedMe) return -1; // a comes first
+          if (!aLikedMe && bLikedMe) return 1;  // b comes first
+          return 0; // maintain original order
+        });
+
         console.log(
-          `After filtering: ${filteredProfiles.length} compatible profiles`
+          `After filtering: ${sortedProfiles.length} compatible profiles (${likedMeIds.filter(id => sortedProfiles.some(p => p.user_id === id)).length} who liked you shown first)`
         );
 
-        setProfiles(filteredProfiles);
+        setProfiles(sortedProfiles);
       } catch (err) {
         console.error("Error:", err);
         toast.error("Something went wrong");
@@ -1150,9 +1165,20 @@ export default function FeedClient({ user }: FeedClientProps) {
           setIsMusicPlaying(false);
         };
 
-        await audio.play();
-        setIsMusicPlaying(true);
-        console.log(`Playing background music for ${profile.display_name}`);
+        try {
+          await audio.play();
+          setIsMusicPlaying(true);
+          setMusicNeedsInteraction(false);
+          console.log(`Playing background music for ${profile.display_name}`);
+        } catch (playError: any) {
+          // Browser blocked autoplay - need user interaction
+          if (playError.name === "NotAllowedError") {
+            console.log("Autoplay blocked - waiting for user interaction");
+            setMusicNeedsInteraction(true);
+          } else {
+            console.warn("Failed to play audio:", playError);
+          }
+        }
       }
     } catch (error) {
       console.warn("Error starting background music:", error);
@@ -1163,17 +1189,27 @@ export default function FeedClient({ user }: FeedClientProps) {
   // Play music when viewing a new profile (if enabled)
   useEffect(() => {
     if (currentProfile && !loading && isMusicEnabled) {
-      startBackgroundMusic(currentProfile);
+      // Small delay to ensure everything is ready
+      const timer = setTimeout(() => {
+        startBackgroundMusic(currentProfile);
+      }, 100);
+      return () => clearTimeout(timer);
     }
     
     // Cleanup when profile changes or component unmounts
     return () => {
       clearCurrentMusic();
     };
-  }, [currentProfile?.user_id, loading, isMusicEnabled]); // Only trigger on profile change or music toggle
+  }, [currentProfile?.user_id, loading, isMusicEnabled, startBackgroundMusic, clearCurrentMusic]);
 
   // Start or end conversation with agent
   const toggleCall = useCallback(async () => {
+    // If music was blocked by autoplay policy, this user interaction can enable it
+    if (musicNeedsInteraction && currentProfile && isMusicEnabled) {
+      setMusicNeedsInteraction(false);
+      startBackgroundMusic(currentProfile);
+    }
+
     // If already connected, end the call
     if (status === "connected") {
       await endCall();
@@ -1201,7 +1237,7 @@ export default function FeedClient({ user }: FeedClientProps) {
       toast.error("Could not access microphone or connect to agent");
       callStartTimeRef.current = null; // Reset on error
     }
-  }, [conversation, currentProfile, status, endCall]);
+  }, [conversation, currentProfile, status, endCall, musicNeedsInteraction, isMusicEnabled, startBackgroundMusic]);
 
   const handleDecision = useCallback(
     async (decision: Decision) => {
@@ -2126,7 +2162,11 @@ export default function FeedClient({ user }: FeedClientProps) {
       {/* Music Toggle - Bottom Right */}
       <button
         onClick={() => {
-          if (isMusicEnabled) {
+          if (musicNeedsInteraction && currentProfile) {
+            // User interaction received - try to play music
+            setMusicNeedsInteraction(false);
+            startBackgroundMusic(currentProfile);
+          } else if (isMusicEnabled) {
             clearCurrentMusic();
             setIsMusicEnabled(false);
           } else {
@@ -2134,11 +2174,13 @@ export default function FeedClient({ user }: FeedClientProps) {
             // Music will start automatically via useEffect
           }
         }}
-        className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-card/80 backdrop-blur-sm border border-border shadow-lg flex items-center justify-center hover:bg-card transition-colors z-40"
-        title={isMusicEnabled ? "Mute music" : "Unmute music"}
+        className={`fixed bottom-6 right-6 w-12 h-12 rounded-full bg-card/80 backdrop-blur-sm border shadow-lg flex items-center justify-center hover:bg-card transition-colors z-40 ${
+          musicNeedsInteraction ? "border-primary animate-pulse" : "border-border"
+        }`}
+        title={musicNeedsInteraction ? "Tap to enable music" : isMusicEnabled ? "Mute music" : "Unmute music"}
       >
         {isMusicEnabled ? (
-          <Music className="w-5 h-5 text-foreground" />
+          <Music className={`w-5 h-5 ${musicNeedsInteraction ? "text-primary" : "text-foreground"}`} />
         ) : (
           <div className="relative">
             <Music className="w-5 h-5 text-muted-foreground" />
