@@ -6,7 +6,6 @@ import {
   Heart,
   X,
   Mic,
-  ChevronDown,
   Sparkles,
   User,
   LogOut,
@@ -1443,11 +1442,6 @@ export default function FeedClient({ user }: FeedClientProps) {
                   </div>
                 )}
               </div>
-              <ChevronDown
-                className={`w-4 h-4 text-muted-foreground transition-transform ${
-                  showMatchesDropdown ? "rotate-180" : ""
-                }`}
-              />
             </button>
 
             <AnimatePresence>
