@@ -16,13 +16,13 @@ export default async function Home() {
   }
 
   return (
-    <div 
+    <div
       className="min-h-screen text-foreground flex flex-col items-center justify-center p-4 relative overflow-hidden"
       style={{
-        backgroundImage: 'url(/background.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+        backgroundImage: "url(/background.png)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
       }}
     >
       <main className="relative z-10 max-w-lg text-center space-y-8">
