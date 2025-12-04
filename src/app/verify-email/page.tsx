@@ -3,13 +3,19 @@
 import { motion } from "framer-motion";
 import { Mail, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 
 export default function VerifyEmailPage() {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Gradient/Glow */}
-      <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#1763FC]/5 rounded-full blur-[120px] pointer-events-none" />
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{
+        backgroundImage: 'url(/background.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -26,7 +32,7 @@ export default function VerifyEmailPage() {
           </h1>
           <p className="text-muted-foreground leading-relaxed">
             We've sent you a verification link. Please check your inbox to
-            verify your account and get started with Ember.
+            verify your account and get started.
           </p>
         </div>
 

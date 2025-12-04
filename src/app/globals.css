@@ -152,6 +152,12 @@
     @apply bg-background text-foreground font-sans;
   }
   
+  /* Prevent scrolling on mobile feed page */
+  body:has([data-no-scroll]) {
+    overflow: hidden;
+    height: 100vh;
+  }
+  
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading;
   }
@@ -183,5 +189,18 @@
   
   .voice-gradient-bg {
     @apply bg-gradient-to-r from-[#17FCB0] to-[#1763FC];
+  }
+
+  /* Warm gradient background */
+  .warm-gradient-bg {
+    background: linear-gradient(135deg, #FF8C42 0%, #FF6B9D 25%, #FFC857 50%, #FF8C42 75%, #FF6B9D 100%);
+    background-size: 200% 200%;
+    animation: gradient-shift 15s ease infinite;
+  }
+
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
 }

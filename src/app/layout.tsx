@@ -14,7 +14,7 @@ const gfsDidot = GFS_Didot({
 });
 
 export const metadata: Metadata = {
-  title: "Ember",
+  title: "ewyber",
   description: "Connect with your voice",
 };
 

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -82,9 +83,9 @@ function LoginForm() {
       className="max-w-md w-full bg-card rounded-xl shadow-2xl shadow-primary/5 overflow-hidden p-8 space-y-8 border border-border/50"
     >
       <div className="text-center space-y-2">
-        <h1 className="text-4xl font-bold text-foreground font-heading">
-          Ember
-        </h1>
+        <div className="flex justify-center mb-2">
+          <Logo width={180} height={55} />
+        </div>
         <p className="text-muted-foreground">
           {isSignUp ? "Create your account" : "Welcome back"}
         </p>
@@ -147,11 +148,15 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Gradient/Glow */}
-      <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#1763FC]/5 rounded-full blur-[120px] pointer-events-none" />
-
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{
+        backgroundImage: 'url(/background.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
       <Suspense fallback={<div>Loading...</div>}>
         <LoginForm />
       </Suspense>
